@@ -36,4 +36,7 @@ public partial class MainWindow : Window
         TrigText.Text  = $"L2:{s.L2Trigger:0.00}  R2:{s.R2Trigger:0.00}";
         BtnText.Text   = $"Buttons: {(s.Buttons == 0 ? "None" : s.Buttons.ToString())}";
     });
+
+    private void OnTestMove(object sender, RoutedEventArgs e) => InputSimulator.MoveRelative(100, 0);
+    private void OnTestClick(object sender, RoutedEventArgs e) => InputSimulator.MouseClick(MouseButton.Left);
 }
