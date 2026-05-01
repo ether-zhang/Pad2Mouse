@@ -1,0 +1,47 @@
+# Build
+bin/
+obj/
+out/
+publish/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# IDE
+.vs/
+.idea/
+.vscode/
+*.swp
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.pidb
+*.svclog
+*.scc
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Rider
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Local config (per-machine runtime config sits next to the EXE)
+config.local.json
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.bak
+~$*
