@@ -14,6 +14,8 @@ public sealed class ScrollConfig
     public float Deadzone { get; set; } = 0.20f;
     public float Speed { get; set; } = 8.0f; // notches per second at full deflection
     public bool InvertVertical { get; set; } = false;
+    public float AccelMaxFactor { get; set; } = 2.5f;     // 1.0 disables acceleration
+    public float AccelRampSeconds { get; set; } = 1.0f;
 }
 
 public sealed class AppConfig

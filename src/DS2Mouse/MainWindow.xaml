@@ -98,6 +98,30 @@
                                 Value="8" ValueChanged="OnScrollChanged" Margin="8,0"/>
                         <TextBlock Grid.Column="2" x:Name="ScrollVal" Text="8" VerticalAlignment="Center" TextAlignment="Right"/>
                     </Grid>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource Field.AccelMax}" VerticalAlignment="Center"/>
+                        <Slider Grid.Column="1" x:Name="ScrollAccelMaxSlider" Minimum="1.0" Maximum="5.0"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                Value="2.5" ValueChanged="OnScrollAccelMaxChanged" Margin="8,0"/>
+                        <TextBlock Grid.Column="2" x:Name="ScrollAccelMaxVal" Text="2.5" VerticalAlignment="Center" TextAlignment="Right"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource Field.AccelRamp}" VerticalAlignment="Center"/>
+                        <Slider Grid.Column="1" x:Name="ScrollAccelRampSlider" Minimum="0.2" Maximum="3.0"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                Value="1.0" ValueChanged="OnScrollAccelRampChanged" Margin="8,0"/>
+                        <TextBlock Grid.Column="2" x:Name="ScrollAccelRampVal" Text="1.0" VerticalAlignment="Center" TextAlignment="Right"/>
+                    </Grid>
                 </StackPanel>
 
                 <!-- Whitelist -->

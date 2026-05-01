@@ -27,7 +27,8 @@ public sealed class MapperEngine : IDisposable
     private bool _prevL2;
     private float _scrollAccum;
     private long _lastTickStamp;
-    private long _stickHoldStartMs; // 0 = stick is in deadzone
+    private long _stickHoldStartMs;  // 0 = left stick is in deadzone
+    private long _scrollHoldStartMs; // 0 = right stick is in deadzone
 
     public AppConfig Config { get; set; }
 
@@ -89,6 +90,7 @@ public sealed class MapperEngine : IDisposable
             _prevL2 = s.L2Trigger > Config.TriggerThreshold;
             _scrollAccum = 0;
             _stickHoldStartMs = 0;
+            _scrollHoldStartMs = 0;
             _lastTickStamp = Environment.TickCount64;
             return;
         }
@@ -138,15 +140,29 @@ public sealed class MapperEngine : IDisposable
         var dz = Config.RightStick.Deadzone;
         var y = s.RightStickY;
         var mag = MathF.Abs(y);
-        if (mag < dz) return;
+        if (mag < dz)
+        {
+            _scrollHoldStartMs = 0;
+            return;
+        }
 
         var rescaled = (mag - dz) / (1 - dz) * MathF.Sign(y);
         if (Config.RightStick.InvertVertical) rescaled = -rescaled;
 
+        // Linear time-based acceleration mirroring the left stick.
+        var now = Environment.TickCount64;
+        if (_scrollHoldStartMs == 0) _scrollHoldStartMs = now;
+        var heldMs = now - _scrollHoldStartMs;
+        var maxF = Config.RightStick.AccelMaxFactor;
+        var ramp = Config.RightStick.AccelRampSeconds;
+        float factor = (ramp <= 0f || maxF <= 1f)
+            ? maxF
+            : 1f + (maxF - 1f) * MathF.Min(1f, heldMs / (ramp * 1000f));
+
         // notches/sec * 120 wheelDelta * dt(s)
         const float WheelDelta = 120f;
         float dt = TickIntervalMs / 1000f;
-        _scrollAccum += rescaled * Config.RightStick.Speed * WheelDelta * dt;
+        _scrollAccum += rescaled * Config.RightStick.Speed * factor * WheelDelta * dt;
 
         // Emit whole wheel-delta units; keep fractional remainder for smoothness.
         if (MathF.Abs(_scrollAccum) >= 1f)
