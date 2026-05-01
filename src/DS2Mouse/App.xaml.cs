@@ -12,6 +12,7 @@ public partial class App : Application
     private DualSenseReader? _reader;
     private MapperEngine? _mapper;
     private AppConfig? _config;
+    private ConfigStore? _store;
     private FullscreenGuard? _guard;
     private MainWindow? _mainWindow;
     private MenuItem? _toggleMenuItem;
@@ -21,13 +22,19 @@ public partial class App : Application
     public MapperEngine Mapper => _mapper!;
     public FullscreenGuard Guard => _guard!;
 
+    public void SaveConfig() => _store?.Save(_config!);
+
     public new static App Current => (App)Application.Current;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        _config = AppConfig.Default();
+        _store  = new ConfigStore();
+        _config = _store.Load();
+        // Persist defaults on first run so the file is discoverable for editing.
+        if (!System.IO.File.Exists(_store.FilePath)) _store.Save(_config);
+
         _reader = new DualSenseReader();
         _mapper = new MapperEngine(_reader, _config);
         _guard = new FullscreenGuard(() => _config.FullscreenWhitelist);
@@ -76,6 +83,8 @@ public partial class App : Application
     {
         if (_toggleMenuItem != null)
             _toggleMenuItem.Header = MenuTextForEnabled(enabled);
+        if (_config != null) _config.Enabled = enabled;
+        SaveConfig();
     });
 
     private void ShowMainWindow()
@@ -104,6 +113,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        SaveConfig();
         _mapper?.Stop();
         _guard?.Stop();
         _mapper?.Dispose();

@@ -97,6 +97,7 @@ public partial class MainWindow : Window
         if (!_initialized) return;
         _config.LeftStick.Sensitivity = (float)e.NewValue;
         SensVal.Text = $"{e.NewValue:0}";
+        App.Current.SaveConfig();
     }
 
     private void OnDzChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -104,6 +105,7 @@ public partial class MainWindow : Window
         if (!_initialized) return;
         _config.LeftStick.Deadzone = (float)e.NewValue;
         DzVal.Text = $"{e.NewValue:0.00}";
+        App.Current.SaveConfig();
     }
 
     private void OnScrollChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -111,6 +113,7 @@ public partial class MainWindow : Window
         if (!_initialized) return;
         _config.RightStick.Speed = (float)e.NewValue;
         ScrollVal.Text = $"{e.NewValue:0}";
+        App.Current.SaveConfig();
     }
 
     private void OnWhitelistAdd(object sender, RoutedEventArgs e) => AddWhitelistFromInput();
@@ -128,6 +131,7 @@ public partial class MainWindow : Window
         {
             _config.FullscreenWhitelist.Add(name);
             RefreshWhitelistBox();
+            App.Current.SaveConfig();
         }
         WhitelistInput.Text = string.Empty;
     }
@@ -138,6 +142,7 @@ public partial class MainWindow : Window
         {
             _config.FullscreenWhitelist.Remove(s);
             RefreshWhitelistBox();
+            App.Current.SaveConfig();
         }
     }
 
