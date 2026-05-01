@@ -54,14 +54,11 @@ public partial class MainWindow : Window
     protected override void OnClosing(CancelEventArgs e)
     {
         // Hide to tray instead of exiting; tray menu's Exit triggers real shutdown.
+        // Keep event subscriptions live — the instance is reused on the next
+        // ShowMainWindow, and we want it to receive language/connection/etc.
+        // updates while hidden so the next open shows current state.
         e.Cancel = true;
         Hide();
-
-        _reader.ConnectionChanged -= OnConnectionChanged;
-        _reader.FrameReceived     -= OnFrameReceived;
-        _mapper.EnabledChanged    -= OnEnabledChanged;
-        _guard.StateChanged       -= OnGuardStateChanged;
-        _loc.LanguageChanged      -= OnLanguageRefresh;
         base.OnClosing(e);
     }
 
