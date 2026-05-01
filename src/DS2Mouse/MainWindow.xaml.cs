@@ -27,12 +27,16 @@ public partial class MainWindow : Window
         _loc    = App.Current.Loc;
 
         // Reflect current config into UI before wiring change handlers.
-        SensSlider.Value   = _config.LeftStick.Sensitivity;
-        DzSlider.Value     = _config.LeftStick.Deadzone;
-        ScrollSlider.Value = _config.RightStick.Speed;
-        SensVal.Text   = $"{_config.LeftStick.Sensitivity:0}";
-        DzVal.Text     = $"{_config.LeftStick.Deadzone:0.00}";
-        ScrollVal.Text = $"{_config.RightStick.Speed:0}";
+        SensSlider.Value      = _config.LeftStick.Sensitivity;
+        DzSlider.Value        = _config.LeftStick.Deadzone;
+        AccelMaxSlider.Value  = _config.LeftStick.AccelMaxFactor;
+        AccelRampSlider.Value = _config.LeftStick.AccelRampSeconds;
+        ScrollSlider.Value    = _config.RightStick.Speed;
+        SensVal.Text      = $"{_config.LeftStick.Sensitivity:0}";
+        DzVal.Text        = $"{_config.LeftStick.Deadzone:0.00}";
+        AccelMaxVal.Text  = $"{_config.LeftStick.AccelMaxFactor:0.0}";
+        AccelRampVal.Text = $"{_config.LeftStick.AccelRampSeconds:0.0}";
+        ScrollVal.Text    = $"{_config.RightStick.Speed:0}";
         EnableCheck.IsChecked = _mapper.Enabled;
         SelectLanguageInCombo(_loc.CurrentLanguage);
         RefreshWhitelistBox();
@@ -132,6 +136,22 @@ public partial class MainWindow : Window
         if (!_initialized) return;
         _config.RightStick.Speed = (float)e.NewValue;
         ScrollVal.Text = $"{e.NewValue:0}";
+        App.Current.SaveConfig();
+    }
+
+    private void OnAccelMaxChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_initialized) return;
+        _config.LeftStick.AccelMaxFactor = (float)e.NewValue;
+        AccelMaxVal.Text = $"{e.NewValue:0.0}";
+        App.Current.SaveConfig();
+    }
+
+    private void OnAccelRampChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_initialized) return;
+        _config.LeftStick.AccelRampSeconds = (float)e.NewValue;
+        AccelRampVal.Text = $"{e.NewValue:0.0}";
         App.Current.SaveConfig();
     }
 

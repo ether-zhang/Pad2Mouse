@@ -28,6 +28,8 @@
 
     <s:String x:Key="Field.Sensitivity">灵敏度</s:String>
     <s:String x:Key="Field.Deadzone">死区</s:String>
+    <s:String x:Key="Field.AccelMax">加速上限（×）</s:String>
+    <s:String x:Key="Field.AccelRamp">加速到上限耗时（秒）</s:String>
     <s:String x:Key="Field.ScrollSpeed">速度（刻度/秒）</s:String>
     <s:String x:Key="Field.Language">语言</s:String>
 

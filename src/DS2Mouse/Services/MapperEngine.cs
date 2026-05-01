@@ -26,6 +26,7 @@ public sealed class MapperEngine : IDisposable
     private bool _prevR2, _prevL2;
     private float _scrollAccum;
     private long _lastTickStamp;
+    private long _stickHoldStartMs; // 0 = stick is in deadzone
 
     public AppConfig Config { get; set; }
 
@@ -87,6 +88,7 @@ public sealed class MapperEngine : IDisposable
             _prevR2 = s.R2Trigger > Config.TriggerThreshold;
             _prevL2 = s.L2Trigger > Config.TriggerThreshold;
             _scrollAccum = 0;
+            _stickHoldStartMs = 0;
             _lastTickStamp = Environment.TickCount64;
             return;
         }
@@ -107,6 +109,25 @@ public sealed class MapperEngine : IDisposable
             Config.LeftStick.Deadzone,
             Config.LeftStick.Exponent,
             Config.LeftStick.Sensitivity);
+
+        if (dx == 0f && dy == 0f)
+        {
+            _stickHoldStartMs = 0;
+            return;
+        }
+
+        // Linear time-based acceleration: factor ramps from 1 to MaxFactor
+        // over RampSeconds while the stick stays out of the deadzone.
+        var now = Environment.TickCount64;
+        if (_stickHoldStartMs == 0) _stickHoldStartMs = now;
+        var heldMs = now - _stickHoldStartMs;
+        var maxF = Config.LeftStick.AccelMaxFactor;
+        var ramp = Config.LeftStick.AccelRampSeconds;
+        float factor = (ramp <= 0f || maxF <= 1f)
+            ? maxF
+            : 1f + (maxF - 1f) * MathF.Min(1f, heldMs / (ramp * 1000f));
+        dx *= factor;
+        dy *= factor;
 
         // Y is positive-up in our normalized state, but screen Y grows downward.
         InputSimulator.MoveRelative((int)MathF.Round(dx), (int)MathF.Round(-dy));

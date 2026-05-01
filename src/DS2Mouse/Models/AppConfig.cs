@@ -5,6 +5,8 @@ public sealed class StickConfig
     public float Deadzone { get; set; } = 0.10f;
     public float Sensitivity { get; set; } = 12.0f;  // px per tick at full deflection (~1500 px/s @ 125Hz)
     public float Exponent { get; set; } = 2.0f;
+    public float AccelMaxFactor { get; set; } = 2.5f;     // 1.0 disables acceleration
+    public float AccelRampSeconds { get; set; } = 1.0f;   // time to reach AccelMaxFactor
 }
 
 public sealed class ScrollConfig

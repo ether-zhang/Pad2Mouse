@@ -60,6 +60,30 @@
                                 Value="0.10" ValueChanged="OnDzChanged" Margin="8,0"/>
                         <TextBlock Grid.Column="2" x:Name="DzVal" Text="0.10" VerticalAlignment="Center" TextAlignment="Right"/>
                     </Grid>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource Field.AccelMax}" VerticalAlignment="Center"/>
+                        <Slider Grid.Column="1" x:Name="AccelMaxSlider" Minimum="1.0" Maximum="5.0"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                Value="2.5" ValueChanged="OnAccelMaxChanged" Margin="8,0"/>
+                        <TextBlock Grid.Column="2" x:Name="AccelMaxVal" Text="2.5" VerticalAlignment="Center" TextAlignment="Right"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource Field.AccelRamp}" VerticalAlignment="Center"/>
+                        <Slider Grid.Column="1" x:Name="AccelRampSlider" Minimum="0.2" Maximum="3.0"
+                                TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                Value="1.0" ValueChanged="OnAccelRampChanged" Margin="8,0"/>
+                        <TextBlock Grid.Column="2" x:Name="AccelRampVal" Text="1.0" VerticalAlignment="Center" TextAlignment="Right"/>
+                    </Grid>
 
                     <TextBlock Text="{DynamicResource Section.RightStick}" FontWeight="Bold" Margin="0,8,0,4"/>
                     <Grid Margin="0,0,0,4">
