@@ -1,11 +1,16 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace DS2Mouse.Services;
 
 /// <summary>
-/// Polls Shell32's user-notification state to detect D3D-exclusive fullscreen
-/// or presentation mode. When detected and the foreground process is NOT in
-/// the whitelist, suppresses input mapping.
+/// Detects whether the current foreground window covers an entire monitor
+/// (catches both D3D exclusive AND borderless-window fullscreen). When the
+/// foreground process is NOT in the whitelist, suppresses input mapping.
+/// SHQueryUserNotificationState is kept as a complementary signal so that
+/// PowerPoint-style presentation-mode and edge-case D3D modes are still
+/// covered even if the rect probe misses.
 /// </summary>
 public sealed class FullscreenGuard : IDisposable
 {
@@ -38,8 +43,9 @@ public sealed class FullscreenGuard : IDisposable
             string? prevName = ForegroundName;
             bool prevFs = IsFullscreen;
 
-            IsFullscreen = QueryFullscreen();
-            ForegroundName = ForegroundProcess.Name();
+            ProbeForeground(out var fs, out var name);
+            IsFullscreen = fs;
+            ForegroundName = name;
 
             if (!IsFullscreen)
             {
@@ -64,6 +70,75 @@ public sealed class FullscreenGuard : IDisposable
         }
     }
 
+    private static void ProbeForeground(out bool fullscreen, out string? processName)
+    {
+        fullscreen = false;
+        processName = null;
+
+        var hwnd = GetForegroundWindow();
+        if (hwnd == IntPtr.Zero) return;
+
+        // Skip shell surfaces — empty desktop / taskbar / wallpaper layer
+        // would otherwise trigger the rect probe since they cover the screen.
+        var cls = GetWindowClassName(hwnd);
+        if (cls is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd")
+            return;
+
+        processName = ProcessNameFromHwnd(hwnd);
+
+        // Skip our own window so opening DS2Mouse maximized doesn't self-suppress.
+        if (string.Equals(processName, "DS2Mouse", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        fullscreen = IsHwndCoveringMonitor(hwnd) || QuerySystemFullscreenHint();
+    }
+
+    private static bool IsHwndCoveringMonitor(IntPtr hwnd)
+    {
+        if (!GetWindowRect(hwnd, out var win)) return false;
+
+        var hMon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if (hMon == IntPtr.Zero) return false;
+
+        var mi = new MONITORINFO { cbSize = (uint)Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(hMon, ref mi)) return false;
+
+        var mon = mi.rcMonitor;
+        // Exact match catches both D3D exclusive (window rect == monitor) and
+        // borderless fullscreen. Maximized windows have rect == work area
+        // (taskbar excluded), so they don't match unless the taskbar is
+        // auto-hidden — which is borderline-fullscreen anyway.
+        return win.Left == mon.Left
+            && win.Top == mon.Top
+            && win.Right == mon.Right
+            && win.Bottom == mon.Bottom;
+    }
+
+    private static bool QuerySystemFullscreenHint()
+    {
+        if (SHQueryUserNotificationState(out var state) != 0) return false;
+        return state == QueryUserNotificationState.RunningD3DFullScreen
+            || state == QueryUserNotificationState.PresentationMode;
+    }
+
+    private static string? ProcessNameFromHwnd(IntPtr hwnd)
+    {
+        if (GetWindowThreadProcessId(hwnd, out var pid) == 0) return null;
+        try
+        {
+            using var p = Process.GetProcessById((int)pid);
+            return p.ProcessName;
+        }
+        catch { return null; }
+    }
+
+    private static string? GetWindowClassName(IntPtr hwnd)
+    {
+        var sb = new StringBuilder(128);
+        var n = GetClassName(hwnd, sb, sb.Capacity);
+        return n > 0 ? sb.ToString() : null;
+    }
+
     private static bool ProcessInList(string? processName, IReadOnlyList<string> list)
     {
         if (string.IsNullOrEmpty(processName)) return false;
@@ -79,12 +154,9 @@ public sealed class FullscreenGuard : IDisposable
     private static string NormalizeName(string s) =>
         s.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? s[..^4] : s;
 
-    private static bool QueryFullscreen()
-    {
-        if (SHQueryUserNotificationState(out var state) != 0) return false;
-        return state == QueryUserNotificationState.RunningD3DFullScreen
-            || state == QueryUserNotificationState.PresentationMode;
-    }
+    // ----- Win32 -----
+
+    private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
 
     private enum QueryUserNotificationState
     {
@@ -96,6 +168,27 @@ public sealed class FullscreenGuard : IDisposable
         QuietTime               = 6,
         App                     = 7,
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public uint cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+    }
+
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+    [DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+    [DllImport("user32.dll")] private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr hwnd, StringBuilder lpClassName, int nMaxCount);
 
     [DllImport("shell32.dll", PreserveSig = true)]
     private static extern int SHQueryUserNotificationState(out QueryUserNotificationState state);
