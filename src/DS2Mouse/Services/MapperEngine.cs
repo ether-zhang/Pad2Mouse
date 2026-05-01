@@ -23,7 +23,8 @@ public sealed class MapperEngine : IDisposable
     private readonly object _tickLock = new();
 
     private DualSenseButton _prevButtons;
-    private bool _prevR2, _prevL2;
+    private bool _leftMouseHeld;     // aggregated from R2 trigger OR Cross button
+    private bool _prevL2;
     private float _scrollAccum;
     private long _lastTickStamp;
     private long _stickHoldStartMs; // 0 = stick is in deadzone
@@ -85,7 +86,6 @@ public sealed class MapperEngine : IDisposable
             // Release any held outputs from previous tick before idling.
             FlushHeldStates();
             _prevButtons = s.Buttons;
-            _prevR2 = s.R2Trigger > Config.TriggerThreshold;
             _prevL2 = s.L2Trigger > Config.TriggerThreshold;
             _scrollAccum = 0;
             _stickHoldStartMs = 0;
@@ -161,12 +161,16 @@ public sealed class MapperEngine : IDisposable
     {
         var thr = Config.TriggerThreshold;
 
-        bool r2 = s.R2Trigger > thr;
-        if (r2 != _prevR2)
+        // Left mouse is held while EITHER R2 trigger or Cross is engaged, so
+        // the user can press Cross over an existing R2-drag (or vice versa)
+        // without the button releasing prematurely.
+        bool wantLeft = s.R2Trigger > thr
+                     || (s.Buttons & DualSenseButton.Cross) != 0;
+        if (wantLeft != _leftMouseHeld)
         {
-            if (r2) InputSimulator.MouseDown(MouseButton.Left);
-            else    InputSimulator.MouseUp(MouseButton.Left);
-            _prevR2 = r2;
+            if (wantLeft) InputSimulator.MouseDown(MouseButton.Left);
+            else          InputSimulator.MouseUp(MouseButton.Left);
+            _leftMouseHeld = wantLeft;
         }
 
         bool l2 = s.L2Trigger > thr;
@@ -182,8 +186,7 @@ public sealed class MapperEngine : IDisposable
     {
         var released = _prevButtons & ~s.Buttons;
 
-        // Click semantics — single fire on press.
-        if ((newlyPressed & DualSenseButton.Cross)    != 0) InputSimulator.MouseClick(MouseButton.Left);
+        // Cross is handled in ProcessTriggers (hold semantics for drag).
         if ((newlyPressed & DualSenseButton.Circle)   != 0) InputSimulator.MouseClick(MouseButton.Right);
         if ((newlyPressed & DualSenseButton.Square)   != 0) InputSimulator.MouseClick(MouseButton.Middle);
         if ((newlyPressed & DualSenseButton.Triangle) != 0) InputSimulator.KeyTap(VK_RETURN);
@@ -204,10 +207,10 @@ public sealed class MapperEngine : IDisposable
 
     private void FlushHeldStates()
     {
-        // Release triggers
-        if (_prevR2) InputSimulator.MouseUp(MouseButton.Left);
-        if (_prevL2) InputSimulator.MouseUp(MouseButton.Right);
-        _prevR2 = _prevL2 = false;
+        if (_leftMouseHeld) InputSimulator.MouseUp(MouseButton.Left);
+        if (_prevL2)        InputSimulator.MouseUp(MouseButton.Right);
+        _leftMouseHeld = false;
+        _prevL2 = false;
 
         // Release D-Pad-mapped arrows
         if ((_prevButtons & DualSenseButton.DPadUp)    != 0) InputSimulator.KeyUp(VK_UP);
