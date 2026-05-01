@@ -86,6 +86,8 @@
                 <Button Grid.Column="2" Content="Remove selected" Padding="10,4" Margin="6,0,0,0" Click="OnWhitelistRemove"/>
             </Grid>
             <ListBox x:Name="WhitelistBox" Height="100" Margin="0,4,0,0"/>
+            <TextBlock x:Name="GuardStatusText" Margin="0,6,0,0" Foreground="DimGray"
+                       Text="Foreground: —    Fullscreen: no    Suppressed: no"/>
         </StackPanel>
 
         <!-- Debug -->

@@ -12,12 +12,14 @@ public partial class App : Application
     private DualSenseReader? _reader;
     private MapperEngine? _mapper;
     private AppConfig? _config;
+    private FullscreenGuard? _guard;
     private MainWindow? _mainWindow;
     private MenuItem? _toggleMenuItem;
 
     public AppConfig Config => _config!;
     public DualSenseReader Reader => _reader!;
     public MapperEngine Mapper => _mapper!;
+    public FullscreenGuard Guard => _guard!;
 
     public new static App Current => (App)Application.Current;
 
@@ -28,10 +30,13 @@ public partial class App : Application
         _config = AppConfig.Default();
         _reader = new DualSenseReader();
         _mapper = new MapperEngine(_reader, _config);
+        _guard = new FullscreenGuard(() => _config.FullscreenWhitelist);
+        _mapper.Gate = _guard.ShouldSuppress;
         _mapper.EnabledChanged += OnMapperEnabledChanged;
 
         _reader.Start();
         _mapper.Start();
+        _guard.Start();
 
         InitTray();
     }
@@ -89,7 +94,9 @@ public partial class App : Application
     private void ExitApp()
     {
         _mapper?.Stop();
+        _guard?.Stop();
         _mapper?.Dispose();
+        _guard?.Dispose();
         _reader?.Dispose();
         _tray?.Dispose();
         Shutdown();
@@ -98,7 +105,9 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _mapper?.Stop();
+        _guard?.Stop();
         _mapper?.Dispose();
+        _guard?.Dispose();
         _reader?.Dispose();
         _tray?.Dispose();
         base.OnExit(e);

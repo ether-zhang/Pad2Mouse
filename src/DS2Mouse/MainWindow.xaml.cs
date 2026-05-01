@@ -11,6 +11,7 @@ public partial class MainWindow : Window
     private readonly DualSenseReader _reader;
     private readonly MapperEngine _mapper;
     private readonly AppConfig _config;
+    private readonly FullscreenGuard _guard;
     private bool _initialized;
 
     public MainWindow()
@@ -20,6 +21,7 @@ public partial class MainWindow : Window
         _reader = App.Current.Reader;
         _mapper = App.Current.Mapper;
         _config = App.Current.Config;
+        _guard  = App.Current.Guard;
 
         // Reflect current config into UI before wiring change handlers.
         SensSlider.Value   = _config.LeftStick.Sensitivity;
@@ -36,6 +38,8 @@ public partial class MainWindow : Window
         _reader.ConnectionChanged += OnConnectionChanged;
         _reader.FrameReceived     += OnFrameReceived;
         _mapper.EnabledChanged    += OnEnabledChanged;
+        _guard.StateChanged       += OnGuardStateChanged;
+        UpdateGuardStatus();
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -47,7 +51,18 @@ public partial class MainWindow : Window
         _reader.ConnectionChanged -= OnConnectionChanged;
         _reader.FrameReceived     -= OnFrameReceived;
         _mapper.EnabledChanged    -= OnEnabledChanged;
+        _guard.StateChanged       -= OnGuardStateChanged;
         base.OnClosing(e);
+    }
+
+    private void OnGuardStateChanged() => Dispatcher.BeginInvoke(UpdateGuardStatus);
+
+    private void UpdateGuardStatus()
+    {
+        var fg = _guard.ForegroundName ?? "—";
+        var fs = _guard.IsFullscreen ? "yes" : "no";
+        var sup = _guard.Suppressed ? "yes" : "no";
+        GuardStatusText.Text = $"Foreground: {fg}    Fullscreen: {fs}    Suppressed: {sup}";
     }
 
     private void OnConnectionChanged(ConnectionType c) => Dispatcher.BeginInvoke(() => SetConnectionLabel(c));
