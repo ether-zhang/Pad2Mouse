@@ -7,17 +7,30 @@ namespace DS2Mouse;
 public partial class MainWindow : Window
 {
     private readonly DualSenseReader _reader;
+    private readonly MapperEngine _mapper;
+    private readonly AppConfig _config;
 
     public MainWindow()
     {
         InitializeComponent();
 
+        _config = AppConfig.Default();
         _reader = new DualSenseReader();
+        _mapper = new MapperEngine(_reader, _config);
+
         _reader.ConnectionChanged += OnConnectionChanged;
         _reader.FrameReceived += OnFrameReceived;
-        _reader.Start();
+        _mapper.EnabledChanged += OnEnabledChanged;
 
-        Closed += (_, _) => _reader.Dispose();
+        _reader.Start();
+        _mapper.Start();
+
+        Closed += (_, _) =>
+        {
+            _mapper.Stop();
+            _mapper.Dispose();
+            _reader.Dispose();
+        };
     }
 
     private void OnConnectionChanged(ConnectionType c) => Dispatcher.BeginInvoke(() =>
@@ -37,6 +50,14 @@ public partial class MainWindow : Window
         BtnText.Text   = $"Buttons: {(s.Buttons == 0 ? "None" : s.Buttons.ToString())}";
     });
 
-    private void OnTestMove(object sender, RoutedEventArgs e) => InputSimulator.MoveRelative(100, 0);
-    private void OnTestClick(object sender, RoutedEventArgs e) => InputSimulator.MouseClick(MouseButton.Left);
+    private void OnEnabledChanged(bool enabled) => Dispatcher.BeginInvoke(() =>
+    {
+        EnableCheck.IsChecked = enabled;
+    });
+
+    private void OnEnableToggle(object sender, RoutedEventArgs e)
+    {
+        if (_mapper is null) return;
+        _mapper.Enabled = EnableCheck.IsChecked == true;
+    }
 }
