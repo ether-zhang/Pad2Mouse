@@ -82,12 +82,14 @@ public partial class MainWindow : Window
 
     private void SetConnectionLabel(ConnectionType c)
     {
-        ConnText.Text = c switch
+        var baseLabel = c switch
         {
             ConnectionType.Usb       => _loc.Get("Status.UsbConnected"),
             ConnectionType.Bluetooth => _loc.Get("Status.BtConnected"),
             _                        => _loc.Get("Status.Disconnected"),
         };
+        var device = _reader.DeviceName;
+        ConnText.Text = string.IsNullOrEmpty(device) ? baseLabel : $"{baseLabel} — {device}";
     }
 
     private void OnFrameReceived(DualSenseState s) => Dispatcher.BeginInvoke(() =>

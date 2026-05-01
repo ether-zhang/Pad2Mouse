@@ -16,6 +16,7 @@ public sealed class DualSenseReader : IDisposable
     private readonly object _lock = new();
 
     public ConnectionType ConnectionType { get; private set; } = ConnectionType.Disconnected;
+    public string? DeviceName { get; private set; }
     public DualSenseState? LatestState { get; private set; }
 
     public event Action<ConnectionType>? ConnectionChanged;
@@ -126,6 +127,7 @@ public sealed class DualSenseReader : IDisposable
                 catch { /* harmless if it fails — many drivers still emit 0x31 */ }
             }
 
+            DeviceName = ProductName(candidate.ProductID);
             SetConnection(conn);
             return true;
         }
@@ -136,6 +138,13 @@ public sealed class DualSenseReader : IDisposable
         }
     }
 
+    private static string ProductName(int productId) => productId switch
+    {
+        0x0CE6 => "DualSense",
+        0x0DF2 => "DualSense Edge",
+        _      => "Controller",
+    };
+
     private void Teardown()
     {
         lock (_lock)
@@ -144,6 +153,7 @@ public sealed class DualSenseReader : IDisposable
             _stream = null;
             _device = null;
         }
+        DeviceName = null;
         SetConnection(ConnectionType.Disconnected);
     }
 
