@@ -44,4 +44,8 @@
     <s:String x:Key="Lang.Chinese">中文</s:String>
     <s:String x:Key="Lang.English">English</s:String>
 
+    <s:String x:Key="Toast.Title">DS2Mouse</s:String>
+    <s:String x:Key="Toast.Enabled">映射已启用</s:String>
+    <s:String x:Key="Toast.Disabled">映射已禁用</s:String>
+
 </ResourceDictionary>

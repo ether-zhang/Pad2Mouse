@@ -104,6 +104,11 @@ public partial class App : Application
             _toggleMenuItem.IsChecked = enabled;
         if (_config != null) _config.Enabled = enabled;
         SaveConfig();
+
+        _tray?.ShowBalloonTip(
+            Loc.Get("Toast.Title"),
+            Loc.Get(enabled ? "Toast.Enabled" : "Toast.Disabled"),
+            BalloonIcon.Info);
     });
 
     private void ShowMainWindow()
