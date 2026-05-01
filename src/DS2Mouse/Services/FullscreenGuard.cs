@@ -86,8 +86,8 @@ public sealed class FullscreenGuard : IDisposable
 
         processName = ProcessNameFromHwnd(hwnd);
 
-        // Skip our own window so opening DS2Mouse maximized doesn't self-suppress.
-        if (string.Equals(processName, "DS2Mouse", StringComparison.OrdinalIgnoreCase))
+        // Skip our own window so opening Pad2Mouse maximized doesn't self-suppress.
+        if (string.Equals(processName, "Pad2Mouse", StringComparison.OrdinalIgnoreCase))
             return;
 
         fullscreen = IsHwndCoveringMonitor(hwnd) || QuerySystemFullscreenHint();

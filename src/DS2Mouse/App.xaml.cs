@@ -62,7 +62,7 @@ public partial class App : Application
         {
             IconSource = new System.Windows.Media.Imaging.BitmapImage(
                 new Uri("pack://application:,,,/Resources/tray.ico", UriKind.Absolute)),
-            ToolTipText = "DS2Mouse",
+            ToolTipText = "Pad2Mouse",
         };
         _tray.TrayMouseDoubleClick += (_, _) => ShowMainWindow();
 
