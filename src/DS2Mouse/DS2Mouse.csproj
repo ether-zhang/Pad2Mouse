@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\tray.ico</ApplicationIcon>
     <AssemblyName>DS2Mouse</AssemblyName>
     <RootNamespace>DS2Mouse</RootNamespace>
     <Version>0.1.0</Version>
