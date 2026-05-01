@@ -59,8 +59,15 @@ public partial class App : Application
         _tray.TrayMouseDoubleClick += (_, _) => ShowMainWindow();
 
         var menu = new ContextMenu();
-        _toggleMenuItem = new MenuItem { Header = MenuTextForEnabled(_mapper!.Enabled) };
-        _toggleMenuItem.Click += (_, _) => _mapper!.Enabled = !_mapper.Enabled;
+        _toggleMenuItem = new MenuItem
+        {
+            Header = "Enable mapping",
+            IsCheckable = true,
+            IsChecked = _mapper!.Enabled,
+        };
+        // Click on a checkable MenuItem flips IsChecked before firing Click,
+        // so we read the new state straight from the item.
+        _toggleMenuItem.Click += (_, _) => _mapper!.Enabled = _toggleMenuItem!.IsChecked;
         menu.Items.Add(_toggleMenuItem);
 
         var showItem = new MenuItem { Header = "Show window" };
@@ -76,13 +83,10 @@ public partial class App : Application
         _tray.ContextMenu = menu;
     }
 
-    private static string MenuTextForEnabled(bool enabled) =>
-        enabled ? "Disable mapping" : "Enable mapping";
-
     private void OnMapperEnabledChanged(bool enabled) => Dispatcher.BeginInvoke(() =>
     {
         if (_toggleMenuItem != null)
-            _toggleMenuItem.Header = MenuTextForEnabled(enabled);
+            _toggleMenuItem.IsChecked = enabled;
         if (_config != null) _config.Enabled = enabled;
         SaveConfig();
     });

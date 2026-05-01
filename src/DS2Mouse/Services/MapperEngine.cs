@@ -28,7 +28,18 @@ public sealed class MapperEngine : IDisposable
     private long _lastTickStamp;
 
     public AppConfig Config { get; set; }
-    public bool Enabled { get; set; } = true;
+
+    private bool _enabled = true;
+    public bool Enabled
+    {
+        get => _enabled;
+        set
+        {
+            if (_enabled == value) return;
+            _enabled = value;
+            EnabledChanged?.Invoke(value);
+        }
+    }
 
     /// <summary>Returns true if input should be suppressed (e.g. fullscreen guard).</summary>
     public Func<bool> Gate { get; set; } = static () => false;
@@ -65,7 +76,6 @@ public sealed class MapperEngine : IDisposable
         if ((newlyPressed & DualSenseButton.PS) != 0)
         {
             Enabled = !Enabled;
-            EnabledChanged?.Invoke(Enabled);
         }
 
         var gated = !Enabled || Gate();
