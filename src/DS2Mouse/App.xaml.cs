@@ -14,13 +14,17 @@ public partial class App : Application
     private AppConfig? _config;
     private ConfigStore? _store;
     private FullscreenGuard? _guard;
+    private LocalizationService? _loc;
     private MainWindow? _mainWindow;
     private MenuItem? _toggleMenuItem;
+    private MenuItem? _showMenuItem;
+    private MenuItem? _exitMenuItem;
 
     public AppConfig Config => _config!;
     public DualSenseReader Reader => _reader!;
     public MapperEngine Mapper => _mapper!;
     public FullscreenGuard Guard => _guard!;
+    public LocalizationService Loc => _loc!;
 
     public void SaveConfig() => _store?.Save(_config!);
 
@@ -34,6 +38,10 @@ public partial class App : Application
         _config = _store.Load();
         // Persist defaults on first run so the file is discoverable for editing.
         if (!System.IO.File.Exists(_store.FilePath)) _store.Save(_config);
+
+        _loc = new LocalizationService(this);
+        _loc.SetLanguage(_config.Language);
+        _loc.LanguageChanged += UpdateTrayMenuLabels;
 
         _reader = new DualSenseReader();
         _mapper = new MapperEngine(_reader, _config);
@@ -61,7 +69,6 @@ public partial class App : Application
         var menu = new ContextMenu();
         _toggleMenuItem = new MenuItem
         {
-            Header = "Enable mapping",
             IsCheckable = true,
             IsChecked = _mapper!.Enabled,
         };
@@ -70,17 +77,25 @@ public partial class App : Application
         _toggleMenuItem.Click += (_, _) => _mapper!.Enabled = _toggleMenuItem!.IsChecked;
         menu.Items.Add(_toggleMenuItem);
 
-        var showItem = new MenuItem { Header = "Show window" };
-        showItem.Click += (_, _) => ShowMainWindow();
-        menu.Items.Add(showItem);
+        _showMenuItem = new MenuItem();
+        _showMenuItem.Click += (_, _) => ShowMainWindow();
+        menu.Items.Add(_showMenuItem);
 
         menu.Items.Add(new Separator());
 
-        var exitItem = new MenuItem { Header = "Exit" };
-        exitItem.Click += (_, _) => ExitApp();
-        menu.Items.Add(exitItem);
+        _exitMenuItem = new MenuItem();
+        _exitMenuItem.Click += (_, _) => ExitApp();
+        menu.Items.Add(_exitMenuItem);
 
         _tray.ContextMenu = menu;
+        UpdateTrayMenuLabels();
+    }
+
+    private void UpdateTrayMenuLabels()
+    {
+        if (_toggleMenuItem != null) _toggleMenuItem.Header = Loc.Get("Action.EnableMapping");
+        if (_showMenuItem   != null) _showMenuItem.Header   = Loc.Get("Action.ShowWindow");
+        if (_exitMenuItem   != null) _exitMenuItem.Header   = Loc.Get("Action.Exit");
     }
 
     private void OnMapperEnabledChanged(bool enabled) => Dispatcher.BeginInvoke(() =>

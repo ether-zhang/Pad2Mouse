@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:s="clr-namespace:System;assembly=mscorlib">
+
+    <s:String x:Key="Window.Title">DS2Mouse</s:String>
+
+    <s:String x:Key="Tab.Main">主页</s:String>
+    <s:String x:Key="Tab.Settings">设置</s:String>
+
+    <s:String x:Key="Status.Connection">连接：</s:String>
+    <s:String x:Key="Status.Disconnected">未连接</s:String>
+    <s:String x:Key="Status.UsbConnected">已连接 (USB)</s:String>
+    <s:String x:Key="Status.BtConnected">已连接 (蓝牙)</s:String>
+
+    <s:String x:Key="Action.EnableMapping">启用映射</s:String>
+    <s:String x:Key="Action.ShowWindow">显示窗口</s:String>
+    <s:String x:Key="Action.Exit">退出</s:String>
+    <s:String x:Key="Action.Add">添加</s:String>
+    <s:String x:Key="Action.RemoveSelected">移除选中</s:String>
+
+    <s:String x:Key="Hint.PsToggle">(手柄 PS 键也可切换)</s:String>
+
+    <s:String x:Key="Section.LeftStick">左摇杆 — 鼠标</s:String>
+    <s:String x:Key="Section.RightStick">右摇杆 — 滚轮</s:String>
+    <s:String x:Key="Section.Whitelist">全屏白名单（按进程名 — 全屏时自动禁用映射，列入此处则保留）</s:String>
+    <s:String x:Key="Section.LiveState">实时状态</s:String>
+    <s:String x:Key="Section.Settings">设置</s:String>
+
+    <s:String x:Key="Field.Sensitivity">灵敏度</s:String>
+    <s:String x:Key="Field.Deadzone">死区</s:String>
+    <s:String x:Key="Field.ScrollSpeed">速度（刻度/秒）</s:String>
+    <s:String x:Key="Field.Language">语言</s:String>
+
+    <s:String x:Key="Stat.Buttons">按键：</s:String>
+    <s:String x:Key="Stat.None">无</s:String>
+    <s:String x:Key="Stat.Yes">是</s:String>
+    <s:String x:Key="Stat.No">否</s:String>
+    <s:String x:Key="Stat.Foreground">前台进程</s:String>
+    <s:String x:Key="Stat.Fullscreen">全屏</s:String>
+    <s:String x:Key="Stat.Suppressed">已抑制</s:String>
+
+    <s:String x:Key="Lang.Chinese">中文</s:String>
+    <s:String x:Key="Lang.English">English</s:String>
+
+</ResourceDictionary>

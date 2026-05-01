@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using DS2Mouse.Models;
 using DS2Mouse.Services;
@@ -12,6 +13,7 @@ public partial class MainWindow : Window
     private readonly MapperEngine _mapper;
     private readonly AppConfig _config;
     private readonly FullscreenGuard _guard;
+    private readonly LocalizationService _loc;
     private bool _initialized;
 
     public MainWindow()
@@ -22,6 +24,7 @@ public partial class MainWindow : Window
         _mapper = App.Current.Mapper;
         _config = App.Current.Config;
         _guard  = App.Current.Guard;
+        _loc    = App.Current.Loc;
 
         // Reflect current config into UI before wiring change handlers.
         SensSlider.Value   = _config.LeftStick.Sensitivity;
@@ -31,15 +34,17 @@ public partial class MainWindow : Window
         DzVal.Text     = $"{_config.LeftStick.Deadzone:0.00}";
         ScrollVal.Text = $"{_config.RightStick.Speed:0}";
         EnableCheck.IsChecked = _mapper.Enabled;
+        SelectLanguageInCombo(_loc.CurrentLanguage);
         RefreshWhitelistBox();
         SetConnectionLabel(_reader.ConnectionType);
+        UpdateGuardStatus();
         _initialized = true;
 
         _reader.ConnectionChanged += OnConnectionChanged;
         _reader.FrameReceived     += OnFrameReceived;
         _mapper.EnabledChanged    += OnEnabledChanged;
         _guard.StateChanged       += OnGuardStateChanged;
-        UpdateGuardStatus();
+        _loc.LanguageChanged      += OnLanguageRefresh;
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -52,6 +57,7 @@ public partial class MainWindow : Window
         _reader.FrameReceived     -= OnFrameReceived;
         _mapper.EnabledChanged    -= OnEnabledChanged;
         _guard.StateChanged       -= OnGuardStateChanged;
+        _loc.LanguageChanged      -= OnLanguageRefresh;
         base.OnClosing(e);
     }
 
@@ -60,9 +66,12 @@ public partial class MainWindow : Window
     private void UpdateGuardStatus()
     {
         var fg = _guard.ForegroundName ?? "—";
-        var fs = _guard.IsFullscreen ? "yes" : "no";
-        var sup = _guard.Suppressed ? "yes" : "no";
-        GuardStatusText.Text = $"Foreground: {fg}    Fullscreen: {fs}    Suppressed: {sup}";
+        var fs = _guard.IsFullscreen ? _loc.Get("Stat.Yes") : _loc.Get("Stat.No");
+        var sup = _guard.Suppressed ? _loc.Get("Stat.Yes") : _loc.Get("Stat.No");
+        GuardStatusText.Text =
+            $"{_loc.Get("Stat.Foreground")}: {fg}    " +
+            $"{_loc.Get("Stat.Fullscreen")}: {fs}    " +
+            $"{_loc.Get("Stat.Suppressed")}: {sup}";
     }
 
     private void OnConnectionChanged(ConnectionType c) => Dispatcher.BeginInvoke(() => SetConnectionLabel(c));
@@ -71,9 +80,9 @@ public partial class MainWindow : Window
     {
         ConnText.Text = c switch
         {
-            ConnectionType.Usb => "Connected (USB)",
-            ConnectionType.Bluetooth => "Connected (Bluetooth)",
-            _ => "Disconnected",
+            ConnectionType.Usb       => _loc.Get("Status.UsbConnected"),
+            ConnectionType.Bluetooth => _loc.Get("Status.BtConnected"),
+            _                        => _loc.Get("Status.Disconnected"),
         };
     }
 
@@ -81,10 +90,20 @@ public partial class MainWindow : Window
     {
         StickText.Text = $"L:({s.LeftStickX,6:0.00}, {s.LeftStickY,6:0.00})  R:({s.RightStickX,6:0.00}, {s.RightStickY,6:0.00})";
         TrigText.Text  = $"L2:{s.L2Trigger:0.00}  R2:{s.R2Trigger:0.00}";
-        BtnText.Text   = $"Buttons: {(s.Buttons == 0 ? "None" : s.Buttons.ToString())}";
+        var btnLabel   = _loc.Get("Stat.Buttons");
+        var btnValue   = s.Buttons == 0 ? _loc.Get("Stat.None") : s.Buttons.ToString();
+        BtnText.Text   = $"{btnLabel} {btnValue}";
     });
 
     private void OnEnabledChanged(bool enabled) => Dispatcher.BeginInvoke(() => EnableCheck.IsChecked = enabled);
+
+    private void OnLanguageRefresh()
+    {
+        // DynamicResource handles XAML labels; refresh the strings we set in code.
+        SetConnectionLabel(_reader.ConnectionType);
+        UpdateGuardStatus();
+        // BtnText updates on next frame.
+    }
 
     private void OnEnableToggle(object sender, RoutedEventArgs e)
     {
@@ -114,6 +133,30 @@ public partial class MainWindow : Window
         _config.RightStick.Speed = (float)e.NewValue;
         ScrollVal.Text = $"{e.NewValue:0}";
         App.Current.SaveConfig();
+    }
+
+    private void OnLanguageChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_initialized) return;
+        if (LanguageCombo.SelectedItem is ComboBoxItem item && item.Tag is string code)
+        {
+            _loc.SetLanguage(code);
+            _config.Language = _loc.CurrentLanguage;
+            App.Current.SaveConfig();
+        }
+    }
+
+    private void SelectLanguageInCombo(string code)
+    {
+        foreach (var obj in LanguageCombo.Items)
+        {
+            if (obj is ComboBoxItem item && item.Tag is string tag && tag == code)
+            {
+                LanguageCombo.SelectedItem = item;
+                return;
+            }
+        }
+        LanguageCombo.SelectedIndex = 0;
     }
 
     private void OnWhitelistAdd(object sender, RoutedEventArgs e) => AddWhitelistFromInput();

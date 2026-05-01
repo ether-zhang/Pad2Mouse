@@ -17,6 +17,7 @@ public sealed class ScrollConfig
 public sealed class AppConfig
 {
     public bool Enabled { get; set; } = true;
+    public string Language { get; set; } = "zh-CN";
     public StickConfig LeftStick { get; set; } = new();
     public ScrollConfig RightStick { get; set; } = new();
     public float TriggerThreshold { get; set; } = 0.20f;

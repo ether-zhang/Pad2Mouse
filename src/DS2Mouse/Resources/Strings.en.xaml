@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:s="clr-namespace:System;assembly=mscorlib">
+
+    <s:String x:Key="Window.Title">DS2Mouse</s:String>
+
+    <s:String x:Key="Tab.Main">Main</s:String>
+    <s:String x:Key="Tab.Settings">Settings</s:String>
+
+    <s:String x:Key="Status.Connection">Connection:</s:String>
+    <s:String x:Key="Status.Disconnected">Disconnected</s:String>
+    <s:String x:Key="Status.UsbConnected">Connected (USB)</s:String>
+    <s:String x:Key="Status.BtConnected">Connected (Bluetooth)</s:String>
+
+    <s:String x:Key="Action.EnableMapping">Enable mapping</s:String>
+    <s:String x:Key="Action.ShowWindow">Show window</s:String>
+    <s:String x:Key="Action.Exit">Exit</s:String>
+    <s:String x:Key="Action.Add">Add</s:String>
+    <s:String x:Key="Action.RemoveSelected">Remove selected</s:String>
+
+    <s:String x:Key="Hint.PsToggle">(PS button on controller also toggles)</s:String>
+
+    <s:String x:Key="Section.LeftStick">Left stick — mouse</s:String>
+    <s:String x:Key="Section.RightStick">Right stick — scroll</s:String>
+    <s:String x:Key="Section.Whitelist">Fullscreen whitelist (process names — mapping auto-disables in fullscreen UNLESS the process is listed)</s:String>
+    <s:String x:Key="Section.LiveState">Live state</s:String>
+    <s:String x:Key="Section.Settings">Settings</s:String>
+
+    <s:String x:Key="Field.Sensitivity">Sensitivity</s:String>
+    <s:String x:Key="Field.Deadzone">Deadzone</s:String>
+    <s:String x:Key="Field.ScrollSpeed">Speed (notch/s)</s:String>
+    <s:String x:Key="Field.Language">Language</s:String>
+
+    <s:String x:Key="Stat.Buttons">Buttons:</s:String>
+    <s:String x:Key="Stat.None">None</s:String>
+    <s:String x:Key="Stat.Yes">yes</s:String>
+    <s:String x:Key="Stat.No">no</s:String>
+    <s:String x:Key="Stat.Foreground">Foreground</s:String>
+    <s:String x:Key="Stat.Fullscreen">Fullscreen</s:String>
+    <s:String x:Key="Stat.Suppressed">Suppressed</s:String>
+
+    <s:String x:Key="Lang.Chinese">中文</s:String>
+    <s:String x:Key="Lang.English">English</s:String>
+
+</ResourceDictionary>
