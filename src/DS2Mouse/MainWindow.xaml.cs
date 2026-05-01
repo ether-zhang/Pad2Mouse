@@ -1,23 +1,39 @@
-﻿using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using DS2Mouse.Models;
+using DS2Mouse.Services;
 
 namespace DS2Mouse;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
+    private readonly DualSenseReader _reader;
+
     public MainWindow()
     {
         InitializeComponent();
+
+        _reader = new DualSenseReader();
+        _reader.ConnectionChanged += OnConnectionChanged;
+        _reader.FrameReceived += OnFrameReceived;
+        _reader.Start();
+
+        Closed += (_, _) => _reader.Dispose();
     }
+
+    private void OnConnectionChanged(ConnectionType c) => Dispatcher.BeginInvoke(() =>
+    {
+        ConnText.Text = c switch
+        {
+            ConnectionType.Usb => "Connected (USB)",
+            ConnectionType.Bluetooth => "Connected (Bluetooth)",
+            _ => "Disconnected",
+        };
+    });
+
+    private void OnFrameReceived(DualSenseState s) => Dispatcher.BeginInvoke(() =>
+    {
+        StickText.Text = $"L:({s.LeftStickX,6:0.00}, {s.LeftStickY,6:0.00})  R:({s.RightStickX,6:0.00}, {s.RightStickY,6:0.00})";
+        TrigText.Text  = $"L2:{s.L2Trigger:0.00}  R2:{s.R2Trigger:0.00}";
+        BtnText.Text   = $"Buttons: {(s.Buttons == 0 ? "None" : s.Buttons.ToString())}";
+    });
 }

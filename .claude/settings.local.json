@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C e:\\\\DS2Mouse status)"
+      "Bash(git -C e:\\\\DS2Mouse status)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

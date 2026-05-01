@@ -1,12 +1,27 @@
-﻿<Window x:Class="DS2Mouse.MainWindow"
+<Window x:Class="DS2Mouse.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:DS2Mouse"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="DS2Mouse" Height="360" Width="520"
+        FontFamily="Segoe UI" FontSize="13">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
+        <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <TextBlock Text="Connection:" FontWeight="Bold" Margin="0,0,8,0"/>
+            <TextBlock x:Name="ConnText" Text="Disconnected"/>
+        </StackPanel>
+
+        <Separator Grid.Row="1" Margin="0,12,0,12"/>
+
+        <StackPanel Grid.Row="2">
+            <TextBlock Text="Live state (debug)" FontWeight="Bold" Margin="0,0,0,8"/>
+            <TextBlock x:Name="StickText" FontFamily="Consolas" Text="L:(0.00, 0.00)  R:(0.00, 0.00)"/>
+            <TextBlock x:Name="TrigText"  FontFamily="Consolas" Text="L2:0.00  R2:0.00" Margin="0,4,0,0"/>
+            <TextBlock x:Name="BtnText"   FontFamily="Consolas" Text="Buttons: None" TextWrapping="Wrap" Margin="0,4,0,0"/>
+        </StackPanel>
     </Grid>
 </Window>
