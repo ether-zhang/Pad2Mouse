@@ -1,13 +1,106 @@
-﻿using System.Configuration;
-using System.Data;
 using System.Windows;
+using System.Windows.Controls;
+using DS2Mouse.Models;
+using DS2Mouse.Services;
+using Hardcodet.Wpf.TaskbarNotification;
 
 namespace DS2Mouse;
 
-/// <summary>
-/// Interaction logic for App.xaml
-/// </summary>
 public partial class App : Application
 {
-}
+    private TaskbarIcon? _tray;
+    private DualSenseReader? _reader;
+    private MapperEngine? _mapper;
+    private AppConfig? _config;
+    private MainWindow? _mainWindow;
+    private MenuItem? _toggleMenuItem;
 
+    public AppConfig Config => _config!;
+    public DualSenseReader Reader => _reader!;
+    public MapperEngine Mapper => _mapper!;
+
+    public new static App Current => (App)Application.Current;
+
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+
+        _config = AppConfig.Default();
+        _reader = new DualSenseReader();
+        _mapper = new MapperEngine(_reader, _config);
+        _mapper.EnabledChanged += OnMapperEnabledChanged;
+
+        _reader.Start();
+        _mapper.Start();
+
+        InitTray();
+    }
+
+    private void InitTray()
+    {
+        _tray = new TaskbarIcon
+        {
+            IconSource = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri("pack://application:,,,/Resources/tray.ico", UriKind.Absolute)),
+            ToolTipText = "DS2Mouse",
+        };
+        _tray.TrayMouseDoubleClick += (_, _) => ShowMainWindow();
+
+        var menu = new ContextMenu();
+        _toggleMenuItem = new MenuItem { Header = MenuTextForEnabled(_mapper!.Enabled) };
+        _toggleMenuItem.Click += (_, _) => _mapper!.Enabled = !_mapper.Enabled;
+        menu.Items.Add(_toggleMenuItem);
+
+        var showItem = new MenuItem { Header = "Show window" };
+        showItem.Click += (_, _) => ShowMainWindow();
+        menu.Items.Add(showItem);
+
+        menu.Items.Add(new Separator());
+
+        var exitItem = new MenuItem { Header = "Exit" };
+        exitItem.Click += (_, _) => ExitApp();
+        menu.Items.Add(exitItem);
+
+        _tray.ContextMenu = menu;
+    }
+
+    private static string MenuTextForEnabled(bool enabled) =>
+        enabled ? "Disable mapping" : "Enable mapping";
+
+    private void OnMapperEnabledChanged(bool enabled) => Dispatcher.BeginInvoke(() =>
+    {
+        if (_toggleMenuItem != null)
+            _toggleMenuItem.Header = MenuTextForEnabled(enabled);
+    });
+
+    private void ShowMainWindow()
+    {
+        if (_mainWindow == null)
+        {
+            _mainWindow = new MainWindow();
+            _mainWindow.Closed += (_, _) => _mainWindow = null;
+        }
+        _mainWindow.Show();
+        if (_mainWindow.WindowState == WindowState.Minimized)
+            _mainWindow.WindowState = WindowState.Normal;
+        _mainWindow.Activate();
+    }
+
+    private void ExitApp()
+    {
+        _mapper?.Stop();
+        _mapper?.Dispose();
+        _reader?.Dispose();
+        _tray?.Dispose();
+        Shutdown();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _mapper?.Stop();
+        _mapper?.Dispose();
+        _reader?.Dispose();
+        _tray?.Dispose();
+        base.OnExit(e);
+    }
+}
