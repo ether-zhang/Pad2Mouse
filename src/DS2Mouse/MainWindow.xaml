@@ -9,17 +9,11 @@
     <TabControl Margin="8">
         <!-- ===== MAIN TAB ===== -->
         <TabItem Header="{DynamicResource Tab.Main}">
-            <Grid Margin="12">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="12">
 
                 <!-- Status row -->
-                <Grid Grid.Row="0">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -32,10 +26,60 @@
                               Checked="OnEnableToggle" Unchecked="OnEnableToggle"/>
                 </Grid>
 
-                <Separator Grid.Row="1" Margin="0,12,0,12"/>
+                <Separator Margin="0,12,0,12"/>
+
+                <!-- Button mapping reference -->
+                <StackPanel Margin="0,0,0,8">
+                    <TextBlock Text="{DynamicResource Section.Mapping}" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <Grid>
+                        <Grid.Resources>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Margin" Value="0,2,0,2"/>
+                            </Style>
+                        </Grid.Resources>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/><RowDefinition/><RowDefinition/>
+                            <RowDefinition/><RowDefinition/><RowDefinition/>
+                            <RowDefinition/><RowDefinition/><RowDefinition/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.LeftStick}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{DynamicResource Mapping.MouseMove}"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.RightStick}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{DynamicResource Mapping.MouseScroll}"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" FontFamily="Consolas" Text="R2 / ✕"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{DynamicResource Mapping.LeftHold}"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" FontFamily="Consolas" Text="L2"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{DynamicResource Mapping.RightHold}"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" FontFamily="Consolas" Text="○"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{DynamicResource Mapping.RightClick}"/>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" FontFamily="Consolas" Text="□"/>
+                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{DynamicResource Mapping.MiddleClick}"/>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" FontFamily="Consolas" Text="△"/>
+                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{DynamicResource Mapping.Enter}"/>
+
+                        <TextBlock Grid.Row="7" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.DPad}"/>
+                        <TextBlock Grid.Row="7" Grid.Column="1" Text="{DynamicResource Mapping.ArrowKeys}"/>
+
+                        <TextBlock Grid.Row="8" Grid.Column="0" FontFamily="Consolas" Text="L3 + R3"/>
+                        <TextBlock Grid.Row="8" Grid.Column="1" Text="{DynamicResource Mapping.ToggleApp}"/>
+                    </Grid>
+                </StackPanel>
+
+                <Separator Margin="0,4,0,12"/>
 
                 <!-- Sensitivity controls -->
-                <StackPanel Grid.Row="2">
+                <StackPanel>
                     <TextBlock Text="{DynamicResource Section.LeftStick}" FontWeight="Bold" Margin="0,0,0,4"/>
                     <Grid Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
@@ -125,7 +169,7 @@
                 </StackPanel>
 
                 <!-- Whitelist -->
-                <StackPanel Grid.Row="3" Margin="0,12,0,8">
+                <StackPanel Margin="0,12,0,8">
                     <TextBlock Text="{DynamicResource Section.Whitelist}"
                                FontWeight="Bold" TextWrapping="Wrap"/>
                     <Grid Margin="0,4,0,0">
@@ -141,55 +185,8 @@
                     <ListBox x:Name="WhitelistBox" Height="100" Margin="0,4,0,0"/>
                     <TextBlock x:Name="GuardStatusText" Margin="0,6,0,0" Foreground="DimGray"/>
                 </StackPanel>
-
-                <!-- Button mapping reference -->
-                <StackPanel Grid.Row="4" Margin="0,8,0,0">
-                    <TextBlock Text="{DynamicResource Section.Mapping}" FontWeight="Bold" Margin="0,0,0,4"/>
-                    <Grid>
-                        <Grid.Resources>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Margin" Value="0,2,0,2"/>
-                            </Style>
-                        </Grid.Resources>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition/><RowDefinition/><RowDefinition/>
-                            <RowDefinition/><RowDefinition/><RowDefinition/>
-                            <RowDefinition/><RowDefinition/><RowDefinition/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.LeftStick}"/>
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{DynamicResource Mapping.MouseMove}"/>
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.RightStick}"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{DynamicResource Mapping.MouseScroll}"/>
-
-                        <TextBlock Grid.Row="2" Grid.Column="0" FontFamily="Consolas" Text="R2 / ✕"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{DynamicResource Mapping.LeftHold}"/>
-
-                        <TextBlock Grid.Row="3" Grid.Column="0" FontFamily="Consolas" Text="L2"/>
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{DynamicResource Mapping.RightHold}"/>
-
-                        <TextBlock Grid.Row="4" Grid.Column="0" FontFamily="Consolas" Text="○"/>
-                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{DynamicResource Mapping.RightClick}"/>
-
-                        <TextBlock Grid.Row="5" Grid.Column="0" FontFamily="Consolas" Text="□"/>
-                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{DynamicResource Mapping.MiddleClick}"/>
-
-                        <TextBlock Grid.Row="6" Grid.Column="0" FontFamily="Consolas" Text="△"/>
-                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{DynamicResource Mapping.Enter}"/>
-
-                        <TextBlock Grid.Row="7" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.DPad}"/>
-                        <TextBlock Grid.Row="7" Grid.Column="1" Text="{DynamicResource Mapping.ArrowKeys}"/>
-
-                        <TextBlock Grid.Row="8" Grid.Column="0" FontFamily="Consolas" Text="L3 + R3"/>
-                        <TextBlock Grid.Row="8" Grid.Column="1" Text="{DynamicResource Mapping.ToggleApp}"/>
-                    </Grid>
-                </StackPanel>
-            </Grid>
+            </StackPanel>
+            </ScrollViewer>
         </TabItem>
 
         <!-- ===== SETTINGS TAB ===== -->

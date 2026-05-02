@@ -47,7 +47,7 @@
     <s:String x:Key="Mapping.MouseMove">Mouse move</s:String>
     <s:String x:Key="Mapping.MouseScroll">Mouse scroll (vertical)</s:String>
     <s:String x:Key="Mapping.LeftHold">Left button hold (drag)</s:String>
-    <s:String x:Key="Mapping.RightHold">Right button hold (drag)</s:String>
+    <s:String x:Key="Mapping.RightHold">Right button hold</s:String>
     <s:String x:Key="Mapping.RightClick">Right click</s:String>
     <s:String x:Key="Mapping.MiddleClick">Middle click</s:String>
     <s:String x:Key="Mapping.Enter">Enter</s:String>
