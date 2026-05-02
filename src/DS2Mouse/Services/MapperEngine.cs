@@ -13,18 +13,21 @@ public sealed class MapperEngine : IDisposable
 
     // Virtual-Key codes used by the default mapping.
     private const ushort VK_RETURN = 0x0D;
-    private const ushort VK_LEFT  = 0x25;
-    private const ushort VK_UP    = 0x26;
-    private const ushort VK_RIGHT = 0x27;
-    private const ushort VK_DOWN  = 0x28;
+    private const ushort VK_ESCAPE = 0x1B;
+    private const ushort VK_SPACE  = 0x20;
+    private const ushort VK_LEFT   = 0x25;
+    private const ushort VK_UP     = 0x26;
+    private const ushort VK_RIGHT  = 0x27;
+    private const ushort VK_DOWN   = 0x28;
 
     private readonly DualSenseReader _reader;
     private readonly Timer _timer;
     private readonly object _tickLock = new();
 
     private DualSenseButton _prevButtons;
-    private bool _leftMouseHeld;     // aggregated from R2 trigger OR Cross button
-    private bool _prevL2;
+    private bool _r2crossPrev;       // aggregated R2 trigger OR Cross button
+    private bool _l2Prev;
+    private bool _circlePrev, _squarePrev, _trianglePrev;
     private float _scrollAccum;
     private long _lastTickStamp;
     private long _stickHoldStartMs;  // 0 = left stick is in deadzone
@@ -92,7 +95,6 @@ public sealed class MapperEngine : IDisposable
             // Release any held outputs from previous tick before idling.
             FlushHeldStates();
             _prevButtons = s.Buttons;
-            _prevL2 = s.L2Trigger > Config.TriggerThreshold;
             _scrollAccum = 0;
             _stickHoldStartMs = 0;
             _scrollHoldStartMs = 0;
@@ -181,42 +183,79 @@ public sealed class MapperEngine : IDisposable
     private void ProcessTriggers(DualSenseState s)
     {
         var thr = Config.TriggerThreshold;
+        var m = Config.Mappings;
 
-        // Left mouse is held while EITHER R2 trigger or Cross is engaged, so
-        // the user can press Cross over an existing R2-drag (or vice versa)
-        // without the button releasing prematurely.
-        bool wantLeft = s.R2Trigger > thr
-                     || (s.Buttons & DualSenseButton.Cross) != 0;
-        if (wantLeft != _leftMouseHeld)
-        {
-            if (wantLeft) InputSimulator.MouseDown(MouseButton.Left);
-            else          InputSimulator.MouseUp(MouseButton.Left);
-            _leftMouseHeld = wantLeft;
-        }
+        // R2 trigger and Cross share one configurable slot, OR-aggregated so
+        // pressing one over the other doesn't release the action prematurely.
+        bool r2c = s.R2Trigger > thr || (s.Buttons & DualSenseButton.Cross) != 0;
+        DispatchInputEdge(m.R2OrCross, r2c, ref _r2crossPrev);
 
         bool l2 = s.L2Trigger > thr;
-        if (l2 != _prevL2)
-        {
-            if (l2) InputSimulator.MouseDown(MouseButton.Right);
-            else    InputSimulator.MouseUp(MouseButton.Right);
-            _prevL2 = l2;
-        }
+        DispatchInputEdge(m.L2, l2, ref _l2Prev);
     }
 
     private void ProcessButtons(DualSenseState s, DualSenseButton newlyPressed)
     {
         var released = _prevButtons & ~s.Buttons;
+        var m = Config.Mappings;
 
-        // Cross is handled in ProcessTriggers (hold semantics for drag).
-        if ((newlyPressed & DualSenseButton.Circle)   != 0) InputSimulator.MouseClick(MouseButton.Right);
-        if ((newlyPressed & DualSenseButton.Square)   != 0) InputSimulator.MouseClick(MouseButton.Middle);
-        if ((newlyPressed & DualSenseButton.Triangle) != 0) InputSimulator.KeyTap(VK_RETURN);
+        bool circle   = (s.Buttons & DualSenseButton.Circle)   != 0;
+        bool square   = (s.Buttons & DualSenseButton.Square)   != 0;
+        bool triangle = (s.Buttons & DualSenseButton.Triangle) != 0;
+        DispatchInputEdge(m.Circle,   circle,   ref _circlePrev);
+        DispatchInputEdge(m.Square,   square,   ref _squarePrev);
+        DispatchInputEdge(m.Triangle, triangle, ref _trianglePrev);
 
-        // Hold semantics — D-Pad as arrow keys.
+        // D-Pad → arrow keys (not user-configurable for now).
         HoldKey(newlyPressed, released, DualSenseButton.DPadUp,    VK_UP);
         HoldKey(newlyPressed, released, DualSenseButton.DPadDown,  VK_DOWN);
         HoldKey(newlyPressed, released, DualSenseButton.DPadLeft,  VK_LEFT);
         HoldKey(newlyPressed, released, DualSenseButton.DPadRight, VK_RIGHT);
+    }
+
+    /// <summary>Apply a configurable action on the rising/falling edge of an
+    /// input. Hold-type actions get matched down/up; click/tap actions fire
+    /// only on the rising edge.</summary>
+    private static void DispatchInputEdge(string action, bool isPressed, ref bool wasPressed)
+    {
+        if (ButtonActions.IsHold(action))
+        {
+            if (isPressed && !wasPressed) ApplyDown(action);
+            else if (!isPressed && wasPressed) ApplyUp(action);
+        }
+        else
+        {
+            if (isPressed && !wasPressed) ApplyDown(action);
+        }
+        wasPressed = isPressed;
+    }
+
+    private static void ApplyDown(string action)
+    {
+        switch (action)
+        {
+            case ButtonActions.LeftClick:   InputSimulator.MouseClick(MouseButton.Left);   break;
+            case ButtonActions.RightClick:  InputSimulator.MouseClick(MouseButton.Right);  break;
+            case ButtonActions.MiddleClick: InputSimulator.MouseClick(MouseButton.Middle); break;
+            case ButtonActions.LeftHold:    InputSimulator.MouseDown(MouseButton.Left);    break;
+            case ButtonActions.RightHold:   InputSimulator.MouseDown(MouseButton.Right);   break;
+            case ButtonActions.MiddleHold:  InputSimulator.MouseDown(MouseButton.Middle);  break;
+            case ButtonActions.Enter:       InputSimulator.KeyTap(VK_RETURN);              break;
+            case ButtonActions.Escape:      InputSimulator.KeyTap(VK_ESCAPE);              break;
+            case ButtonActions.Space:       InputSimulator.KeyTap(VK_SPACE);               break;
+            // None / unknown: no-op
+        }
+    }
+
+    private static void ApplyUp(string action)
+    {
+        switch (action)
+        {
+            case ButtonActions.LeftHold:   InputSimulator.MouseUp(MouseButton.Left);   break;
+            case ButtonActions.RightHold:  InputSimulator.MouseUp(MouseButton.Right);  break;
+            case ButtonActions.MiddleHold: InputSimulator.MouseUp(MouseButton.Middle); break;
+            // Click / tap actions don't track release.
+        }
     }
 
     private static void HoldKey(DualSenseButton newlyPressed, DualSenseButton released,
@@ -228,16 +267,31 @@ public sealed class MapperEngine : IDisposable
 
     private void FlushHeldStates()
     {
-        if (_leftMouseHeld) InputSimulator.MouseUp(MouseButton.Left);
-        if (_prevL2)        InputSimulator.MouseUp(MouseButton.Right);
-        _leftMouseHeld = false;
-        _prevL2 = false;
+        var m = Config.Mappings;
+        if (_r2crossPrev)  ApplyUp(m.R2OrCross);
+        if (_l2Prev)       ApplyUp(m.L2);
+        if (_circlePrev)   ApplyUp(m.Circle);
+        if (_squarePrev)   ApplyUp(m.Square);
+        if (_trianglePrev) ApplyUp(m.Triangle);
+        _r2crossPrev = _l2Prev = _circlePrev = _squarePrev = _trianglePrev = false;
 
         // Release D-Pad-mapped arrows
         if ((_prevButtons & DualSenseButton.DPadUp)    != 0) InputSimulator.KeyUp(VK_UP);
         if ((_prevButtons & DualSenseButton.DPadDown)  != 0) InputSimulator.KeyUp(VK_DOWN);
         if ((_prevButtons & DualSenseButton.DPadLeft)  != 0) InputSimulator.KeyUp(VK_LEFT);
         if ((_prevButtons & DualSenseButton.DPadRight) != 0) InputSimulator.KeyUp(VK_RIGHT);
+    }
+
+    /// <summary>Releases any outputs currently held under the existing mapping.
+    /// Call this from the GUI BEFORE swapping a mapping entry so the old
+    /// hold action is properly closed; the next tick starts the new action
+    /// from a clean state.</summary>
+    public void ReleaseHeldInputs()
+    {
+        lock (_tickLock)
+        {
+            FlushHeldStates();
+        }
     }
 
     private static (float dx, float dy) ApplyStickCurve(

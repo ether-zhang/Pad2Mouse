@@ -45,6 +45,7 @@ public partial class MainWindow : Window
         NotifyCheck.IsChecked = _config.EnableNotifications;
         AutoStartCheck.IsChecked = StartupRegistration.IsRegistered();
         SelectLanguageInCombo(_loc.CurrentLanguage);
+        PopulateMappingCombos();
         RefreshWhitelistBox();
         SetConnectionLabel(_reader.ConnectionType);
         UpdateGuardStatus();
@@ -177,6 +178,84 @@ public partial class MainWindow : Window
         if (!_initialized) return;
         if (AutoStartCheck.IsChecked == true) StartupRegistration.Register();
         else                                  StartupRegistration.Unregister();
+    }
+
+    private void PopulateMappingCombos()
+    {
+        foreach (var combo in MappingCombos())
+        {
+            combo.Items.Clear();
+            foreach (var id in ButtonActions.All)
+            {
+                var item = new ComboBoxItem { Tag = id };
+                // SetResourceReference makes the displayed label track the
+                // current language dictionary, so it updates on language swap.
+                item.SetResourceReference(ContentControl.ContentProperty, $"Mapping.{id}");
+                combo.Items.Add(item);
+            }
+
+            var slot = (string)combo.Tag;
+            var current = ReadMapping(slot);
+            SelectActionInCombo(combo, current);
+        }
+    }
+
+    private IEnumerable<ComboBox> MappingCombos()
+    {
+        yield return MapR2CrossCombo;
+        yield return MapL2Combo;
+        yield return MapCircleCombo;
+        yield return MapSquareCombo;
+        yield return MapTriangleCombo;
+    }
+
+    private string ReadMapping(string slot) => slot switch
+    {
+        "R2OrCross" => _config.Mappings.R2OrCross,
+        "L2"        => _config.Mappings.L2,
+        "Circle"    => _config.Mappings.Circle,
+        "Square"    => _config.Mappings.Square,
+        "Triangle"  => _config.Mappings.Triangle,
+        _ => ButtonActions.None,
+    };
+
+    private void WriteMapping(string slot, string action)
+    {
+        switch (slot)
+        {
+            case "R2OrCross": _config.Mappings.R2OrCross = action; break;
+            case "L2":        _config.Mappings.L2        = action; break;
+            case "Circle":    _config.Mappings.Circle    = action; break;
+            case "Square":    _config.Mappings.Square    = action; break;
+            case "Triangle":  _config.Mappings.Triangle  = action; break;
+        }
+    }
+
+    private static void SelectActionInCombo(ComboBox combo, string actionId)
+    {
+        foreach (var obj in combo.Items)
+        {
+            if (obj is ComboBoxItem item && (string)item.Tag == actionId)
+            {
+                combo.SelectedItem = item;
+                return;
+            }
+        }
+        combo.SelectedIndex = 0;
+    }
+
+    private void OnMappingChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_initialized) return;
+        if (sender is not ComboBox combo) return;
+        if (combo.SelectedItem is not ComboBoxItem item) return;
+        if (combo.Tag is not string slot || item.Tag is not string actionId) return;
+
+        // Release whatever the OLD action was holding before swapping in the
+        // new one — otherwise a hold mid-swap would never receive its up event.
+        _mapper.ReleaseHeldInputs();
+        WriteMapping(slot, actionId);
+        App.Current.SaveConfig();
     }
 
     private void OnLanguageChanged(object sender, SelectionChangedEventArgs e)

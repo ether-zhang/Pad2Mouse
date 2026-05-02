@@ -54,19 +54,24 @@
                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{DynamicResource Mapping.MouseScroll}"/>
 
                         <TextBlock Grid.Row="2" Grid.Column="0" FontFamily="Consolas" Text="R2 / ✕"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{DynamicResource Mapping.LeftHold}"/>
+                        <ComboBox Grid.Row="2" Grid.Column="1" x:Name="MapR2CrossCombo" Tag="R2OrCross"
+                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
 
                         <TextBlock Grid.Row="3" Grid.Column="0" FontFamily="Consolas" Text="L2"/>
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{DynamicResource Mapping.RightHold}"/>
+                        <ComboBox Grid.Row="3" Grid.Column="1" x:Name="MapL2Combo" Tag="L2"
+                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
 
                         <TextBlock Grid.Row="4" Grid.Column="0" FontFamily="Consolas" Text="○"/>
-                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{DynamicResource Mapping.RightClick}"/>
+                        <ComboBox Grid.Row="4" Grid.Column="1" x:Name="MapCircleCombo" Tag="Circle"
+                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
 
                         <TextBlock Grid.Row="5" Grid.Column="0" FontFamily="Consolas" Text="□"/>
-                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{DynamicResource Mapping.MiddleClick}"/>
+                        <ComboBox Grid.Row="5" Grid.Column="1" x:Name="MapSquareCombo" Tag="Square"
+                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
 
                         <TextBlock Grid.Row="6" Grid.Column="0" FontFamily="Consolas" Text="△"/>
-                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{DynamicResource Mapping.Enter}"/>
+                        <ComboBox Grid.Row="6" Grid.Column="1" x:Name="MapTriangleCombo" Tag="Triangle"
+                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
 
                         <TextBlock Grid.Row="7" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.DPad}"/>
                         <TextBlock Grid.Row="7" Grid.Column="1" Text="{DynamicResource Mapping.ArrowKeys}"/>

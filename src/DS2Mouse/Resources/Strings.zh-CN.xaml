@@ -46,13 +46,20 @@
     <s:String x:Key="Mapping.DPad">方向键</s:String>
     <s:String x:Key="Mapping.MouseMove">鼠标移动</s:String>
     <s:String x:Key="Mapping.MouseScroll">滚轮（垂直）</s:String>
-    <s:String x:Key="Mapping.LeftHold">鼠标左键按住（可拖拽）</s:String>
-    <s:String x:Key="Mapping.RightHold">鼠标右键按住</s:String>
-    <s:String x:Key="Mapping.RightClick">鼠标右键单击</s:String>
-    <s:String x:Key="Mapping.MiddleClick">鼠标中键单击</s:String>
-    <s:String x:Key="Mapping.Enter">Enter 键</s:String>
     <s:String x:Key="Mapping.ArrowKeys">上下左右箭头</s:String>
     <s:String x:Key="Mapping.ToggleApp">切换映射启停</s:String>
+
+    <!-- Action options for configurable mapping dropdowns. -->
+    <s:String x:Key="Mapping.None">无</s:String>
+    <s:String x:Key="Mapping.LeftClick">左键单击</s:String>
+    <s:String x:Key="Mapping.RightClick">右键单击</s:String>
+    <s:String x:Key="Mapping.MiddleClick">中键单击</s:String>
+    <s:String x:Key="Mapping.LeftHold">左键按住</s:String>
+    <s:String x:Key="Mapping.RightHold">右键按住</s:String>
+    <s:String x:Key="Mapping.MiddleHold">中键按住</s:String>
+    <s:String x:Key="Mapping.Enter">Enter</s:String>
+    <s:String x:Key="Mapping.Escape">Esc</s:String>
+    <s:String x:Key="Mapping.Space">空格</s:String>
 
     <s:String x:Key="Lang.Chinese">中文</s:String>
     <s:String x:Key="Lang.English">English</s:String>

@@ -27,6 +27,7 @@ public sealed class ConfigStore
             var c = JsonSerializer.Deserialize<AppConfig>(json, Options) ?? AppConfig.Default();
             c.LeftStick ??= new StickConfig();
             c.RightStick ??= new ScrollConfig();
+            c.Mappings ??= new ButtonMappings();
             c.FullscreenWhitelist ??= new List<string>();
             return c;
         }

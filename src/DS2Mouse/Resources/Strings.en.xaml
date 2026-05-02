@@ -46,13 +46,20 @@
     <s:String x:Key="Mapping.DPad">D-Pad</s:String>
     <s:String x:Key="Mapping.MouseMove">Mouse move</s:String>
     <s:String x:Key="Mapping.MouseScroll">Mouse scroll (vertical)</s:String>
-    <s:String x:Key="Mapping.LeftHold">Left button hold (drag)</s:String>
-    <s:String x:Key="Mapping.RightHold">Right button hold</s:String>
-    <s:String x:Key="Mapping.RightClick">Right click</s:String>
-    <s:String x:Key="Mapping.MiddleClick">Middle click</s:String>
-    <s:String x:Key="Mapping.Enter">Enter</s:String>
     <s:String x:Key="Mapping.ArrowKeys">Arrow keys</s:String>
     <s:String x:Key="Mapping.ToggleApp">Toggle mapping</s:String>
+
+    <!-- Action options for configurable mapping dropdowns. -->
+    <s:String x:Key="Mapping.None">None</s:String>
+    <s:String x:Key="Mapping.LeftClick">Left click</s:String>
+    <s:String x:Key="Mapping.RightClick">Right click</s:String>
+    <s:String x:Key="Mapping.MiddleClick">Middle click</s:String>
+    <s:String x:Key="Mapping.LeftHold">Left button hold</s:String>
+    <s:String x:Key="Mapping.RightHold">Right button hold</s:String>
+    <s:String x:Key="Mapping.MiddleHold">Middle button hold</s:String>
+    <s:String x:Key="Mapping.Enter">Enter</s:String>
+    <s:String x:Key="Mapping.Escape">Esc</s:String>
+    <s:String x:Key="Mapping.Space">Space</s:String>
 
     <s:String x:Key="Lang.Chinese">中文</s:String>
     <s:String x:Key="Lang.English">English</s:String>

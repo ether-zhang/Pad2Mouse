@@ -26,6 +26,7 @@ public sealed class AppConfig
     public StickConfig LeftStick { get; set; } = new();
     public ScrollConfig RightStick { get; set; } = new();
     public float TriggerThreshold { get; set; } = 0.20f;
+    public ButtonMappings Mappings { get; set; } = new();
     public List<string> FullscreenWhitelist { get; set; } = new();
 
     public static AppConfig Default() => new();
