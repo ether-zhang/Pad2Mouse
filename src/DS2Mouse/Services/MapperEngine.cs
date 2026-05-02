@@ -29,7 +29,7 @@ public sealed class MapperEngine : IDisposable
     private readonly object _tickLock = new();
 
     private DualSenseButton _prevButtons;
-    private bool _r2crossPrev;       // aggregated R2 trigger OR Cross button
+    private bool _r2Prev, _crossPrev;
     private bool _l2Prev;
     private bool _circlePrev, _squarePrev, _trianglePrev;
     private float _scrollAccum;
@@ -189,10 +189,8 @@ public sealed class MapperEngine : IDisposable
         var thr = Config.TriggerThreshold;
         var m = Config.Mappings;
 
-        // R2 trigger and Cross share one configurable slot, OR-aggregated so
-        // pressing one over the other doesn't release the action prematurely.
-        bool r2c = s.R2Trigger > thr || (s.Buttons & DualSenseButton.Cross) != 0;
-        DispatchInputEdge(m.R2OrCross, r2c, ref _r2crossPrev);
+        bool r2 = s.R2Trigger > thr;
+        DispatchInputEdge(m.R2, r2, ref _r2Prev);
 
         bool l2 = s.L2Trigger > thr;
         DispatchInputEdge(m.L2, l2, ref _l2Prev);
@@ -203,9 +201,11 @@ public sealed class MapperEngine : IDisposable
         var released = _prevButtons & ~s.Buttons;
         var m = Config.Mappings;
 
+        bool cross    = (s.Buttons & DualSenseButton.Cross)    != 0;
         bool circle   = (s.Buttons & DualSenseButton.Circle)   != 0;
         bool square   = (s.Buttons & DualSenseButton.Square)   != 0;
         bool triangle = (s.Buttons & DualSenseButton.Triangle) != 0;
+        DispatchInputEdge(m.Cross,    cross,    ref _crossPrev);
         DispatchInputEdge(m.Circle,   circle,   ref _circlePrev);
         DispatchInputEdge(m.Square,   square,   ref _squarePrev);
         DispatchInputEdge(m.Triangle, triangle, ref _trianglePrev);
@@ -279,12 +279,13 @@ public sealed class MapperEngine : IDisposable
     private void FlushHeldStates()
     {
         var m = Config.Mappings;
-        if (_r2crossPrev)  ApplyUp(m.R2OrCross);
+        if (_r2Prev)       ApplyUp(m.R2);
+        if (_crossPrev)    ApplyUp(m.Cross);
         if (_l2Prev)       ApplyUp(m.L2);
         if (_circlePrev)   ApplyUp(m.Circle);
         if (_squarePrev)   ApplyUp(m.Square);
         if (_trianglePrev) ApplyUp(m.Triangle);
-        _r2crossPrev = _l2Prev = _circlePrev = _squarePrev = _trianglePrev = false;
+        _r2Prev = _crossPrev = _l2Prev = _circlePrev = _squarePrev = _trianglePrev = false;
 
         // Release D-Pad-mapped arrows
         if ((_prevButtons & DualSenseButton.DPadUp)    != 0) InputSimulator.KeyUp(VK_UP);

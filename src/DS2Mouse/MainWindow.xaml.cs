@@ -202,8 +202,9 @@ public partial class MainWindow : Window
 
     private IEnumerable<ComboBox> MappingCombos()
     {
-        yield return MapR2CrossCombo;
+        yield return MapR2Combo;
         yield return MapL2Combo;
+        yield return MapCrossCombo;
         yield return MapCircleCombo;
         yield return MapSquareCombo;
         yield return MapTriangleCombo;
@@ -211,11 +212,12 @@ public partial class MainWindow : Window
 
     private string ReadMapping(string slot) => slot switch
     {
-        "R2OrCross" => _config.Mappings.R2OrCross,
-        "L2"        => _config.Mappings.L2,
-        "Circle"    => _config.Mappings.Circle,
-        "Square"    => _config.Mappings.Square,
-        "Triangle"  => _config.Mappings.Triangle,
+        "R2"       => _config.Mappings.R2,
+        "Cross"    => _config.Mappings.Cross,
+        "L2"       => _config.Mappings.L2,
+        "Circle"   => _config.Mappings.Circle,
+        "Square"   => _config.Mappings.Square,
+        "Triangle" => _config.Mappings.Triangle,
         _ => ButtonActions.None,
     };
 
@@ -223,11 +225,12 @@ public partial class MainWindow : Window
     {
         switch (slot)
         {
-            case "R2OrCross": _config.Mappings.R2OrCross = action; break;
-            case "L2":        _config.Mappings.L2        = action; break;
-            case "Circle":    _config.Mappings.Circle    = action; break;
-            case "Square":    _config.Mappings.Square    = action; break;
-            case "Triangle":  _config.Mappings.Triangle  = action; break;
+            case "R2":       _config.Mappings.R2       = action; break;
+            case "Cross":    _config.Mappings.Cross    = action; break;
+            case "L2":       _config.Mappings.L2       = action; break;
+            case "Circle":   _config.Mappings.Circle   = action; break;
+            case "Square":   _config.Mappings.Square   = action; break;
+            case "Triangle": _config.Mappings.Triangle = action; break;
         }
     }
 

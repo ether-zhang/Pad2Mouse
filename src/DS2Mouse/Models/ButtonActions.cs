@@ -34,11 +34,10 @@ public static class ButtonActions
 
 public sealed class ButtonMappings
 {
-    /// <summary>R2 trigger and Cross share one slot — both contribute to the
-    /// same action via OR aggregate, mirroring the original drag behavior.</summary>
-    public string R2OrCross { get; set; } = ButtonActions.LeftHold;
-    public string L2        { get; set; } = ButtonActions.RightHold;
-    public string Circle    { get; set; } = ButtonActions.RightClick;
-    public string Square    { get; set; } = ButtonActions.MiddleClick;
-    public string Triangle  { get; set; } = ButtonActions.Enter;
+    public string R2       { get; set; } = ButtonActions.LeftHold;
+    public string Cross    { get; set; } = ButtonActions.LeftHold;
+    public string L2       { get; set; } = ButtonActions.RightHold;
+    public string Circle   { get; set; } = ButtonActions.RightClick;
+    public string Square   { get; set; } = ButtonActions.MiddleClick;
+    public string Triangle { get; set; } = ButtonActions.Enter;
 }
