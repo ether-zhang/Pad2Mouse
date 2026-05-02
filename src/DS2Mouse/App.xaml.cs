@@ -9,6 +9,7 @@ namespace DS2Mouse;
 public partial class App : Application
 {
     private TaskbarIcon? _tray;
+    private System.Drawing.Icon? _appIcon;
     private DualSenseReader? _reader;
     private MapperEngine? _mapper;
     private AppConfig? _config;
@@ -58,6 +59,18 @@ public partial class App : Application
 
     private void InitTray()
     {
+        // Load the icon from the bundled resource into a System.Drawing.Icon
+        // so it can be passed directly to balloon-tip calls — this bypasses
+        // Windows' EXE-icon cache, which otherwise tends to keep showing the
+        // stale icon next to toast notifications even after the EXE changes.
+        var streamInfo = GetResourceStream(
+            new Uri("pack://application:,,,/Resources/tray.ico", UriKind.Absolute));
+        if (streamInfo != null)
+        {
+            using var s = streamInfo.Stream;
+            _appIcon = new System.Drawing.Icon(s);
+        }
+
         _tray = new TaskbarIcon
         {
             IconSource = new System.Windows.Media.Imaging.BitmapImage(
@@ -105,10 +118,15 @@ public partial class App : Application
         if (_config != null) _config.Enabled = enabled;
         SaveConfig();
 
-        _tray?.ShowBalloonTip(
-            Loc.Get("Toast.Title"),
-            Loc.Get(enabled ? "Toast.Enabled" : "Toast.Disabled"),
-            BalloonIcon.Info);
+        if (_tray != null)
+        {
+            var title = Loc.Get("Toast.Title");
+            var msg   = Loc.Get(enabled ? "Toast.Enabled" : "Toast.Disabled");
+            if (_appIcon != null)
+                _tray.ShowBalloonTip(title, msg, _appIcon, largeIcon: true);
+            else
+                _tray.ShowBalloonTip(title, msg, BalloonIcon.Info);
+        }
     });
 
     private void ShowMainWindow()
@@ -132,6 +150,7 @@ public partial class App : Application
         _guard?.Dispose();
         _reader?.Dispose();
         _tray?.Dispose();
+        _appIcon?.Dispose();
         Shutdown();
     }
 
@@ -144,6 +163,7 @@ public partial class App : Application
         _guard?.Dispose();
         _reader?.Dispose();
         _tray?.Dispose();
+        _appIcon?.Dispose();
         base.OnExit(e);
     }
 }
