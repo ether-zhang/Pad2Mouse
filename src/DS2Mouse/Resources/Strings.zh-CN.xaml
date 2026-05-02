@@ -18,7 +18,7 @@
     <s:String x:Key="Action.Add">添加</s:String>
     <s:String x:Key="Action.RemoveSelected">移除选中</s:String>
 
-    <s:String x:Key="Hint.PsToggle">(手柄 PS 键也可切换)</s:String>
+    <s:String x:Key="Hint.PsToggle">(同时按下 L3+R3 也可切换)</s:String>
 
     <s:String x:Key="Section.LeftStick">左摇杆 — 鼠标</s:String>
     <s:String x:Key="Section.RightStick">右摇杆 — 滚轮</s:String>

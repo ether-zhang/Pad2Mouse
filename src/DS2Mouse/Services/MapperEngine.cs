@@ -74,9 +74,14 @@ public sealed class MapperEngine : IDisposable
         if (snapshot is null) return;
         var s = snapshot.Value;
 
-        // PS toggles Enabled regardless of gating, so user can re-enable from controller.
+        // L3+R3 (both sticks clicked together) toggles Enabled regardless of
+        // gating, so the user can re-enable from the controller. The PS button
+        // is avoided because Steam / Game Bar / system shells intercept it.
+        const DualSenseButton ToggleCombo = DualSenseButton.L3 | DualSenseButton.R3;
         var newlyPressed = s.Buttons & ~_prevButtons;
-        if ((newlyPressed & DualSenseButton.PS) != 0)
+        bool comboNow  = (s.Buttons    & ToggleCombo) == ToggleCombo;
+        bool comboPrev = (_prevButtons & ToggleCombo) == ToggleCombo;
+        if (comboNow && !comboPrev)
         {
             Enabled = !Enabled;
         }

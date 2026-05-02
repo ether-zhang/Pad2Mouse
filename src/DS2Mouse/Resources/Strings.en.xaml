@@ -18,7 +18,7 @@
     <s:String x:Key="Action.Add">Add</s:String>
     <s:String x:Key="Action.RemoveSelected">Remove selected</s:String>
 
-    <s:String x:Key="Hint.PsToggle">(PS button on controller also toggles)</s:String>
+    <s:String x:Key="Hint.PsToggle">(L3+R3 on controller also toggles)</s:String>
 
     <s:String x:Key="Section.LeftStick">Left stick — mouse</s:String>
     <s:String x:Key="Section.RightStick">Right stick — scroll</s:String>
