@@ -23,7 +23,7 @@
     <s:String x:Key="Section.LeftStick">左摇杆 — 鼠标</s:String>
     <s:String x:Key="Section.RightStick">右摇杆 — 滚轮</s:String>
     <s:String x:Key="Section.Whitelist">全屏白名单（按进程名 — 全屏时自动禁用映射，列入此处则保留）</s:String>
-    <s:String x:Key="Section.LiveState">实时状态</s:String>
+    <s:String x:Key="Section.Mapping">按键映射</s:String>
     <s:String x:Key="Section.Settings">设置</s:String>
 
     <s:String x:Key="Field.Sensitivity">灵敏度</s:String>
@@ -35,13 +35,24 @@
     <s:String x:Key="Field.Notifications">启用通知</s:String>
     <s:String x:Key="Field.AutoStart">开机自启</s:String>
 
-    <s:String x:Key="Stat.Buttons">按键：</s:String>
-    <s:String x:Key="Stat.None">无</s:String>
     <s:String x:Key="Stat.Yes">是</s:String>
     <s:String x:Key="Stat.No">否</s:String>
     <s:String x:Key="Stat.Foreground">前台进程</s:String>
     <s:String x:Key="Stat.Fullscreen">全屏</s:String>
     <s:String x:Key="Stat.Suppressed">已抑制</s:String>
+
+    <s:String x:Key="Mapping.LeftStick">左摇杆</s:String>
+    <s:String x:Key="Mapping.RightStick">右摇杆</s:String>
+    <s:String x:Key="Mapping.DPad">方向键</s:String>
+    <s:String x:Key="Mapping.MouseMove">鼠标移动</s:String>
+    <s:String x:Key="Mapping.MouseScroll">滚轮（垂直）</s:String>
+    <s:String x:Key="Mapping.LeftHold">鼠标左键按住（可拖拽）</s:String>
+    <s:String x:Key="Mapping.RightHold">鼠标右键按住（可拖拽）</s:String>
+    <s:String x:Key="Mapping.RightClick">鼠标右键单击</s:String>
+    <s:String x:Key="Mapping.MiddleClick">鼠标中键单击</s:String>
+    <s:String x:Key="Mapping.Enter">Enter 键</s:String>
+    <s:String x:Key="Mapping.ArrowKeys">上下左右箭头</s:String>
+    <s:String x:Key="Mapping.ToggleApp">切换映射启停</s:String>
 
     <s:String x:Key="Lang.Chinese">中文</s:String>
     <s:String x:Key="Lang.English">English</s:String>

@@ -51,7 +51,6 @@ public partial class MainWindow : Window
         _initialized = true;
 
         _reader.ConnectionChanged += OnConnectionChanged;
-        _reader.FrameReceived     += OnFrameReceived;
         _mapper.EnabledChanged    += OnEnabledChanged;
         _guard.StateChanged       += OnGuardStateChanged;
         _loc.LanguageChanged      += OnLanguageRefresh;
@@ -95,23 +94,13 @@ public partial class MainWindow : Window
         ConnText.Text = string.IsNullOrEmpty(device) ? baseLabel : $"{baseLabel} — {device}";
     }
 
-    private void OnFrameReceived(DualSenseState s) => Dispatcher.BeginInvoke(() =>
-    {
-        StickText.Text = $"L:({s.LeftStickX,6:0.00}, {s.LeftStickY,6:0.00})  R:({s.RightStickX,6:0.00}, {s.RightStickY,6:0.00})";
-        TrigText.Text  = $"L2:{s.L2Trigger:0.00}  R2:{s.R2Trigger:0.00}";
-        var btnLabel   = _loc.Get("Stat.Buttons");
-        var btnValue   = s.Buttons == 0 ? _loc.Get("Stat.None") : s.Buttons.ToString();
-        BtnText.Text   = $"{btnLabel} {btnValue}";
-    });
-
     private void OnEnabledChanged(bool enabled) => Dispatcher.BeginInvoke(() => EnableCheck.IsChecked = enabled);
 
     private void OnLanguageRefresh()
     {
-        // DynamicResource handles XAML labels; refresh the strings we set in code.
+        // DynamicResource handles XAML labels; refresh strings we set in code.
         SetConnectionLabel(_reader.ConnectionType);
         UpdateGuardStatus();
-        // BtnText updates on next frame.
     }
 
     private void OnEnableToggle(object sender, RoutedEventArgs e)
