@@ -33,6 +33,7 @@
     <s:String x:Key="Field.ScrollSpeed">Speed (notch/s)</s:String>
     <s:String x:Key="Field.Language">Language</s:String>
     <s:String x:Key="Field.Notifications">Enable notifications</s:String>
+    <s:String x:Key="Field.AutoStart">Start with Windows</s:String>
 
     <s:String x:Key="Stat.Buttons">Buttons:</s:String>
     <s:String x:Key="Stat.None">None</s:String>

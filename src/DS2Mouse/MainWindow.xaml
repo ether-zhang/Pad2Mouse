@@ -175,6 +175,10 @@
                 <CheckBox x:Name="NotifyCheck" Content="{DynamicResource Field.Notifications}"
                           Margin="0,4,0,0"
                           Checked="OnNotifyToggle" Unchecked="OnNotifyToggle"/>
+
+                <CheckBox x:Name="AutoStartCheck" Content="{DynamicResource Field.AutoStart}"
+                          Margin="0,8,0,0"
+                          Checked="OnAutoStartToggle" Unchecked="OnAutoStartToggle"/>
             </StackPanel>
         </TabItem>
     </TabControl>

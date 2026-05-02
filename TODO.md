@@ -2,7 +2,7 @@
 
 后续待办，按需排期。
 
-- [ ] 支持开机自启控制，放入设置（注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 项）
+- [x] 支持开机自启控制，放入设置（注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 项）
 - [x] 更换图标（当前是占位 P2M 字形）
 - [ ] 主页 / 设置换成更易懂的名称
 - [ ] 支持 Xbox 手柄（XInput 或 HID 枚举不同 VID/PID）

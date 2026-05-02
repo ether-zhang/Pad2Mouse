@@ -43,6 +43,7 @@ public partial class MainWindow : Window
         ScrollAccelRampVal.Text = $"{_config.RightStick.AccelRampSeconds:0.0}";
         EnableCheck.IsChecked = _mapper.Enabled;
         NotifyCheck.IsChecked = _config.EnableNotifications;
+        AutoStartCheck.IsChecked = StartupRegistration.IsRegistered();
         SelectLanguageInCombo(_loc.CurrentLanguage);
         RefreshWhitelistBox();
         SetConnectionLabel(_reader.ConnectionType);
@@ -180,6 +181,13 @@ public partial class MainWindow : Window
         if (!_initialized) return;
         _config.EnableNotifications = NotifyCheck.IsChecked == true;
         App.Current.SaveConfig();
+    }
+
+    private void OnAutoStartToggle(object sender, RoutedEventArgs e)
+    {
+        if (!_initialized) return;
+        if (AutoStartCheck.IsChecked == true) StartupRegistration.Register();
+        else                                  StartupRegistration.Unregister();
     }
 
     private void OnLanguageChanged(object sender, SelectionChangedEventArgs e)

@@ -33,6 +33,7 @@
     <s:String x:Key="Field.ScrollSpeed">速度（刻度/秒）</s:String>
     <s:String x:Key="Field.Language">语言</s:String>
     <s:String x:Key="Field.Notifications">启用通知</s:String>
+    <s:String x:Key="Field.AutoStart">开机自启</s:String>
 
     <s:String x:Key="Stat.Buttons">按键：</s:String>
     <s:String x:Key="Stat.None">无</s:String>
