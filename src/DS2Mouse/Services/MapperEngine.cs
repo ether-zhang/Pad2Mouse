@@ -12,13 +12,17 @@ public sealed class MapperEngine : IDisposable
     private const int TickIntervalMs = 8; // 125 Hz
 
     // Virtual-Key codes used by the default mapping.
-    private const ushort VK_RETURN = 0x0D;
-    private const ushort VK_ESCAPE = 0x1B;
-    private const ushort VK_SPACE  = 0x20;
-    private const ushort VK_LEFT   = 0x25;
-    private const ushort VK_UP     = 0x26;
-    private const ushort VK_RIGHT  = 0x27;
-    private const ushort VK_DOWN   = 0x28;
+    private const ushort VK_TAB     = 0x09;
+    private const ushort VK_RETURN  = 0x0D;
+    private const ushort VK_SHIFT   = 0x10;
+    private const ushort VK_CONTROL = 0x11;
+    private const ushort VK_MENU    = 0x12; // Alt
+    private const ushort VK_ESCAPE  = 0x1B;
+    private const ushort VK_SPACE   = 0x20;
+    private const ushort VK_LEFT    = 0x25;
+    private const ushort VK_UP      = 0x26;
+    private const ushort VK_RIGHT   = 0x27;
+    private const ushort VK_DOWN    = 0x28;
 
     private readonly DualSenseReader _reader;
     private readonly Timer _timer;
@@ -243,6 +247,10 @@ public sealed class MapperEngine : IDisposable
             case ButtonActions.Enter:       InputSimulator.KeyTap(VK_RETURN);              break;
             case ButtonActions.Escape:      InputSimulator.KeyTap(VK_ESCAPE);              break;
             case ButtonActions.Space:       InputSimulator.KeyTap(VK_SPACE);               break;
+            case ButtonActions.Tab:         InputSimulator.KeyTap(VK_TAB);                 break;
+            case ButtonActions.Ctrl:        InputSimulator.KeyDown(VK_CONTROL);            break;
+            case ButtonActions.Shift:       InputSimulator.KeyDown(VK_SHIFT);              break;
+            case ButtonActions.Alt:         InputSimulator.KeyDown(VK_MENU);               break;
             // None / unknown: no-op
         }
     }
@@ -254,6 +262,9 @@ public sealed class MapperEngine : IDisposable
             case ButtonActions.LeftHold:   InputSimulator.MouseUp(MouseButton.Left);   break;
             case ButtonActions.RightHold:  InputSimulator.MouseUp(MouseButton.Right);  break;
             case ButtonActions.MiddleHold: InputSimulator.MouseUp(MouseButton.Middle); break;
+            case ButtonActions.Ctrl:       InputSimulator.KeyUp(VK_CONTROL);           break;
+            case ButtonActions.Shift:      InputSimulator.KeyUp(VK_SHIFT);             break;
+            case ButtonActions.Alt:        InputSimulator.KeyUp(VK_MENU);              break;
             // Click / tap actions don't track release.
         }
     }

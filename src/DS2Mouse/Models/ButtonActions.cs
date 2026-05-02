@@ -14,16 +14,22 @@ public static class ButtonActions
     public const string Enter       = "Enter";
     public const string Escape      = "Escape";
     public const string Space       = "Space";
+    public const string Tab         = "Tab";
+    public const string Ctrl        = "Ctrl";
+    public const string Shift       = "Shift";
+    public const string Alt         = "Alt";
 
     public static readonly string[] All =
     {
         None, LeftClick, RightClick, MiddleClick,
         LeftHold, RightHold, MiddleHold,
-        Enter, Escape, Space,
+        Enter, Escape, Space, Tab,
+        Ctrl, Shift, Alt,
     };
 
     public static bool IsHold(string id) =>
-        id == LeftHold || id == RightHold || id == MiddleHold;
+        id == LeftHold || id == RightHold || id == MiddleHold
+        || id == Ctrl || id == Shift || id == Alt;
 }
 
 public sealed class ButtonMappings

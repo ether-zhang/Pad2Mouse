@@ -60,6 +60,10 @@
     <s:String x:Key="Mapping.Enter">Enter</s:String>
     <s:String x:Key="Mapping.Escape">Esc</s:String>
     <s:String x:Key="Mapping.Space">Space</s:String>
+    <s:String x:Key="Mapping.Tab">Tab</s:String>
+    <s:String x:Key="Mapping.Ctrl">Ctrl</s:String>
+    <s:String x:Key="Mapping.Shift">Shift</s:String>
+    <s:String x:Key="Mapping.Alt">Alt</s:String>
 
     <s:String x:Key="Lang.Chinese">中文</s:String>
     <s:String x:Key="Lang.English">English</s:String>
