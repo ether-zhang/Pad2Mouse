@@ -154,12 +154,8 @@
 
         <!-- ===== SETTINGS TAB ===== -->
         <TabItem Header="{DynamicResource Tab.Settings}">
-            <Grid Margin="12">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0" Margin="0,4,0,0">
+            <StackPanel Margin="12">
+                <Grid Margin="0,4,0,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="140"/>
                         <ColumnDefinition Width="220"/>
@@ -175,7 +171,11 @@
                         </ComboBoxItem>
                     </ComboBox>
                 </Grid>
-            </Grid>
+
+                <CheckBox x:Name="NotifyCheck" Content="{DynamicResource Field.Notifications}"
+                          Margin="0,4,0,0"
+                          Checked="OnNotifyToggle" Unchecked="OnNotifyToggle"/>
+            </StackPanel>
         </TabItem>
     </TabControl>
 </Window>

@@ -42,6 +42,7 @@ public partial class MainWindow : Window
         ScrollAccelMaxVal.Text  = $"{_config.RightStick.AccelMaxFactor:0.0}";
         ScrollAccelRampVal.Text = $"{_config.RightStick.AccelRampSeconds:0.0}";
         EnableCheck.IsChecked = _mapper.Enabled;
+        NotifyCheck.IsChecked = _config.EnableNotifications;
         SelectLanguageInCombo(_loc.CurrentLanguage);
         RefreshWhitelistBox();
         SetConnectionLabel(_reader.ConnectionType);
@@ -171,6 +172,13 @@ public partial class MainWindow : Window
         if (!_initialized) return;
         _config.RightStick.AccelRampSeconds = (float)e.NewValue;
         ScrollAccelRampVal.Text = $"{e.NewValue:0.0}";
+        App.Current.SaveConfig();
+    }
+
+    private void OnNotifyToggle(object sender, RoutedEventArgs e)
+    {
+        if (!_initialized) return;
+        _config.EnableNotifications = NotifyCheck.IsChecked == true;
         App.Current.SaveConfig();
     }
 
