@@ -17,10 +17,17 @@ namespace DS2Mouse;
 /// </summary>
 public partial class OnScreenKeyboardWindow : Window
 {
-    private const ushort VK_SHIFT = 0x10;
+    private const ushort VK_SHIFT   = 0x10;
+    private const ushort VK_CONTROL = 0x11;
 
     private bool _shiftLatched;
+    private bool _ctrlLatched;
     private bool _positioned;
+
+    /// <summary>VK → (unshifted-label, shifted-label). Letters use lowercase by
+    /// default and uppercase when Shift is latched; digits show their US-layout
+    /// shift-symbol when Shift is latched.</summary>
+    private static readonly Dictionary<ushort, (string Off, string On)> KeyLabels = BuildKeyLabels();
 
     public OnScreenKeyboardWindow()
     {
@@ -87,36 +94,99 @@ public partial class OnScreenKeyboardWindow : Window
         if (!ushort.TryParse(tag.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var vk))
             return;
 
-        if (_shiftLatched)
-        {
-            InputSimulator.KeyDown(VK_SHIFT);
-            InputSimulator.KeyTap(vk);
-            InputSimulator.KeyUp(VK_SHIFT);
-            SetShift(false);
-        }
-        else
-        {
-            InputSimulator.KeyTap(vk);
-        }
+        // Send modifiers down → key tap → modifiers up. Both modifiers can be
+        // active at once for combos like Ctrl+Shift+T. Both auto-deactivate
+        // after one keystroke (single-shot latch).
+        if (_ctrlLatched)  InputSimulator.KeyDown(VK_CONTROL);
+        if (_shiftLatched) InputSimulator.KeyDown(VK_SHIFT);
+        InputSimulator.KeyTap(vk);
+        if (_shiftLatched) InputSimulator.KeyUp(VK_SHIFT);
+        if (_ctrlLatched)  InputSimulator.KeyUp(VK_CONTROL);
+
+        if (_shiftLatched) SetShift(false);
+        if (_ctrlLatched)  SetCtrl(false);
     }
 
-    private void OnShiftClick(object sender, RoutedEventArgs e)
-    {
-        SetShift(!_shiftLatched);
-    }
-
-    private void OnCloseClick(object sender, RoutedEventArgs e)
-    {
-        Hide();
-    }
+    private void OnShiftClick(object sender, RoutedEventArgs e) => SetShift(!_shiftLatched);
+    private void OnCtrlClick(object sender, RoutedEventArgs e)  => SetCtrl(!_ctrlLatched);
+    private void OnCloseClick(object sender, RoutedEventArgs e) => Hide();
 
     private void SetShift(bool on)
     {
         _shiftLatched = on;
-        ShiftBtn.Background = on
-            ? new SolidColorBrush(Color.FromArgb(0xCC, 0x4F, 0xC3, 0xF7))  // accent blue
-            : new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)); // default
+        ShiftBtn.Background = on ? AccentBrush : DefaultBrush;
+        RefreshKeyLabels();
     }
+
+    private void SetCtrl(bool on)
+    {
+        _ctrlLatched = on;
+        CtrlBtn.Background = on ? AccentBrush : DefaultBrush;
+    }
+
+    private void RefreshKeyLabels()
+    {
+        foreach (var btn in EnumerateKeyButtons(this))
+        {
+            if (btn.Tag is not string tag) continue;
+            if (!tag.StartsWith("0x", StringComparison.Ordinal)) continue;
+            if (!ushort.TryParse(tag.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var vk))
+                continue;
+            if (KeyLabels.TryGetValue(vk, out var labels))
+            {
+                btn.Content = _shiftLatched ? labels.On : labels.Off;
+            }
+        }
+    }
+
+    private static IEnumerable<Button> EnumerateKeyButtons(DependencyObject root)
+    {
+        int n = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < n; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is Button b) yield return b;
+            else
+                foreach (var sub in EnumerateKeyButtons(child))
+                    yield return sub;
+        }
+    }
+
+    private static Dictionary<ushort, (string Off, string On)> BuildKeyLabels()
+    {
+        var map = new Dictionary<ushort, (string, string)>();
+        // Letters: A (0x41) .. Z (0x5A)
+        for (ushort vk = 0x41; vk <= 0x5A; vk++)
+        {
+            char up = (char)vk;
+            char lo = char.ToLowerInvariant(up);
+            map[vk] = (lo.ToString(), up.ToString());
+        }
+        // Digit row: 1!, 2@, 3#, 4$, 5%, 6^, 7&, 8*, 9(, 0)  (US layout)
+        var digitShift = new[]
+        {
+            ((ushort)0x31, "1", "!"),
+            ((ushort)0x32, "2", "@"),
+            ((ushort)0x33, "3", "#"),
+            ((ushort)0x34, "4", "$"),
+            ((ushort)0x35, "5", "%"),
+            ((ushort)0x36, "6", "^"),
+            ((ushort)0x37, "7", "&"),
+            ((ushort)0x38, "8", "*"),
+            ((ushort)0x39, "9", "("),
+            ((ushort)0x30, "0", ")"),
+        };
+        foreach (var (vk, off, on) in digitShift) map[vk] = (off, on);
+        // Comma / period: ,< and .>
+        map[0xBC] = (",", "<");
+        map[0xBE] = (".", ">");
+        return map;
+    }
+
+    private static readonly SolidColorBrush AccentBrush  =
+        new(Color.FromArgb(0xCC, 0x4F, 0xC3, 0xF7));
+    private static readonly SolidColorBrush DefaultBrush =
+        new(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF));
 
     // ----- Win32 -----
     private const int GWL_EXSTYLE       = -20;

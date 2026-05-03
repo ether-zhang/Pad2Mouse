@@ -52,19 +52,19 @@
         </Style>
     </Window.Resources>
 
-    <!-- Outer border = drag handle and translucent background -->
     <Border x:Name="DragArea" Background="#C0202020" CornerRadius="10" Padding="6"
             MouseLeftButtonDown="OnDragAreaPressed">
-        <Grid>
-            <!-- Close button, top-right. Lets the user dismiss when the mapper
-                 is disabled and L1+R1 cannot reach the toggle. -->
-            <Button Style="{StaticResource KeyBtn}" Width="22" Height="22"
-                    Content="✕" FontSize="10"
-                    HorizontalAlignment="Right" VerticalAlignment="Top"
-                    Margin="0,-2,-2,0" Click="OnCloseClick"/>
         <StackPanel HorizontalAlignment="Center">
 
-            <!-- Row 1: digits + backspace -->
+            <!-- Title bar: drag handle + close button -->
+            <Grid Margin="0,0,0,2" Height="22">
+                <Button Style="{StaticResource KeyBtn}" Width="22" Height="22"
+                        Content="✕" FontSize="10"
+                        HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Click="OnCloseClick"/>
+            </Grid>
+
+            <!-- Row 1: digits + backspace. Labels swap to !@#$%^&*() when Shift is latched. -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button Style="{StaticResource KeyBtn}" Content="1" Tag="0x31" Click="OnKeyClick"/>
                 <Button Style="{StaticResource KeyBtn}" Content="2" Tag="0x32" Click="OnKeyClick"/>
@@ -79,55 +79,58 @@
                 <Button Style="{StaticResource WideBtn}" Width="56" Content="⌫" Tag="0x08" Click="OnKeyClick"/>
             </StackPanel>
 
-            <!-- Row 2: top alpha -->
+            <!-- Row 2: top alpha. Shown lowercase by default, uppercase when Shift is latched. -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Style="{StaticResource KeyBtn}" Content="Q" Tag="0x51" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="W" Tag="0x57" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="E" Tag="0x45" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="R" Tag="0x52" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="T" Tag="0x54" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="Y" Tag="0x59" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="U" Tag="0x55" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="I" Tag="0x49" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="O" Tag="0x4F" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="P" Tag="0x50" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="q" Tag="0x51" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="w" Tag="0x57" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="e" Tag="0x45" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="r" Tag="0x52" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="t" Tag="0x54" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="y" Tag="0x59" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="u" Tag="0x55" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="i" Tag="0x49" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="o" Tag="0x4F" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="p" Tag="0x50" Click="OnKeyClick"/>
             </StackPanel>
 
             <!-- Row 3: middle alpha + enter -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Style="{StaticResource KeyBtn}" Content="A" Tag="0x41" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="S" Tag="0x53" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="D" Tag="0x44" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="F" Tag="0x46" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="G" Tag="0x47" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="H" Tag="0x48" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="J" Tag="0x4A" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="K" Tag="0x4B" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="L" Tag="0x4C" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="a" Tag="0x41" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="s" Tag="0x53" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="d" Tag="0x44" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="f" Tag="0x46" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="g" Tag="0x47" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="h" Tag="0x48" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="j" Tag="0x4A" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="k" Tag="0x4B" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="l" Tag="0x4C" Click="OnKeyClick"/>
                 <Button Style="{StaticResource WideBtn}" Width="64" Content="↵" Tag="0x0D" Click="OnKeyClick"/>
             </StackPanel>
 
-            <!-- Row 4: Shift + bottom alpha + Tab + Esc -->
+            <!-- Row 4: Shift + bottom alpha + comma + period -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button x:Name="ShiftBtn" Style="{StaticResource WideBtn}" Width="60"
                         Content="⇧" Tag="SHIFT" Click="OnShiftClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="Z" Tag="0x5A" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="X" Tag="0x58" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="C" Tag="0x43" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="V" Tag="0x56" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="B" Tag="0x42" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="N" Tag="0x4E" Click="OnKeyClick"/>
-                <Button Style="{StaticResource KeyBtn}" Content="M" Tag="0x4D" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="z" Tag="0x5A" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="x" Tag="0x58" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="c" Tag="0x43" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="v" Tag="0x56" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="b" Tag="0x42" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="n" Tag="0x4E" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="m" Tag="0x4D" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="," Tag="0xBC" Click="OnKeyClick"/>
+                <Button Style="{StaticResource KeyBtn}" Content="." Tag="0xBE" Click="OnKeyClick"/>
+            </StackPanel>
+
+            <!-- Row 5: Ctrl + Tab + Space + Esc -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button x:Name="CtrlBtn" Style="{StaticResource WideBtn}" Width="60"
+                        Content="Ctrl" Tag="CTRL" Click="OnCtrlClick"/>
                 <Button Style="{StaticResource WideBtn}" Width="44" Content="Tab" Tag="0x09" Click="OnKeyClick"/>
+                <Button Style="{StaticResource WideBtn}" Width="220" Content="Space" Tag="0x20" Click="OnKeyClick"/>
                 <Button Style="{StaticResource WideBtn}" Width="44" Content="Esc" Tag="0x1B" Click="OnKeyClick"/>
             </StackPanel>
 
-            <!-- Row 5: Space (centered) -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Style="{StaticResource WideBtn}" Width="240" Content="Space" Tag="0x20" Click="OnKeyClick"/>
-            </StackPanel>
-
         </StackPanel>
-        </Grid>
     </Border>
 </Window>
