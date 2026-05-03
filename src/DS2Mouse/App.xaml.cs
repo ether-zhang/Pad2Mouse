@@ -26,6 +26,7 @@ public partial class App : Application
     public MapperEngine Mapper => _mapper!;
     public FullscreenGuard Guard => _guard!;
     public LocalizationService Loc => _loc!;
+    public OnScreenKeyboardWindow Keyboard => _keyboard!;
 
     public void SaveConfig() => _store?.Save(_config!);
 

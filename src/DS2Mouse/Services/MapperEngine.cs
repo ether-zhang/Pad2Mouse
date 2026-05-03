@@ -255,6 +255,11 @@ public sealed class MapperEngine : IDisposable
 
     private static void ApplyDown(string action)
     {
+        if (ButtonActions.TryParseKey(action, out var keyVk))
+        {
+            InputSimulator.KeyDown(keyVk);
+            return;
+        }
         switch (action)
         {
             case ButtonActions.LeftClick:   InputSimulator.MouseClick(MouseButton.Left);   break;
@@ -276,6 +281,11 @@ public sealed class MapperEngine : IDisposable
 
     private static void ApplyUp(string action)
     {
+        if (ButtonActions.TryParseKey(action, out var keyVk))
+        {
+            InputSimulator.KeyUp(keyVk);
+            return;
+        }
         switch (action)
         {
             case ButtonActions.LeftHold:   InputSimulator.MouseUp(MouseButton.Left);   break;

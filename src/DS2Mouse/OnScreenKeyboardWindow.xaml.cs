@@ -24,6 +24,9 @@ public partial class OnScreenKeyboardWindow : Window
     private bool _ctrlLatched;
     private bool _positioned;
 
+    private Action<ushort?>? _captureCallback;
+    public bool IsInCaptureMode => _captureCallback != null;
+
     /// <summary>VK → (unshifted-label, shifted-label). Letters use lowercase by
     /// default and uppercase when Shift is latched; digits show their US-layout
     /// shift-symbol when Shift is latched.</summary>
@@ -35,17 +38,52 @@ public partial class OnScreenKeyboardWindow : Window
         Loaded += OnFirstLoaded;
     }
 
-    /// <summary>Thread-safe show/hide — invoked from the mapper's timer thread.</summary>
+    /// <summary>Thread-safe show/hide — invoked from the mapper's timer thread.
+    /// While the keyboard is in capture mode, a controller toggle cancels the
+    /// pending capture rather than hiding outright.</summary>
     public void Toggle()
     {
         Dispatcher.Invoke(() =>
         {
+            if (IsInCaptureMode) { CancelCapture(); return; }
             if (IsVisible) Hide();
             else Show();
         });
     }
 
     public void HideKeyboard() => Dispatcher.Invoke(Hide);
+
+    /// <summary>Enter pick-a-key mode. The next click on a printable key fires
+    /// the callback with that VK; clicking ✕ or pressing the controller toggle
+    /// fires the callback with null. Modifier keys (Shift/Ctrl) keep their
+    /// latch behavior so the user can preview case but they do not capture.</summary>
+    public void BeginCapture(Action<ushort?> onResult)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            // If a capture is already in flight, cancel it so the new caller wins.
+            _captureCallback?.Invoke(null);
+            _captureCallback = onResult;
+            CaptureHintText.Visibility = Visibility.Visible;
+            DragArea.BorderBrush = AccentBrush;
+            // Reset modifier latches so the visual state is clean.
+            if (_shiftLatched) SetShift(false);
+            if (_ctrlLatched)  SetCtrl(false);
+            Show();
+        });
+    }
+
+    private void EndCapture(ushort? result)
+    {
+        var cb = _captureCallback;
+        _captureCallback = null;
+        CaptureHintText.Visibility = Visibility.Collapsed;
+        DragArea.BorderBrush = System.Windows.Media.Brushes.Transparent;
+        Hide();
+        cb?.Invoke(result);
+    }
+
+    private void CancelCapture() => EndCapture(null);
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -94,6 +132,14 @@ public partial class OnScreenKeyboardWindow : Window
         if (!ushort.TryParse(tag.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var vk))
             return;
 
+        if (IsInCaptureMode)
+        {
+            // Pick mode: hand the VK to the caller and exit. Modifier latches
+            // are visual only; we never capture them.
+            EndCapture(vk);
+            return;
+        }
+
         // Send modifiers down → key tap → modifiers up. Both modifiers can be
         // active at once for combos like Ctrl+Shift+T. Both auto-deactivate
         // after one keystroke (single-shot latch).
@@ -109,7 +155,12 @@ public partial class OnScreenKeyboardWindow : Window
 
     private void OnShiftClick(object sender, RoutedEventArgs e) => SetShift(!_shiftLatched);
     private void OnCtrlClick(object sender, RoutedEventArgs e)  => SetCtrl(!_ctrlLatched);
-    private void OnCloseClick(object sender, RoutedEventArgs e) => Hide();
+
+    private void OnCloseClick(object sender, RoutedEventArgs e)
+    {
+        if (IsInCaptureMode) CancelCapture();
+        else Hide();
+    }
 
     private void SetShift(bool on)
     {

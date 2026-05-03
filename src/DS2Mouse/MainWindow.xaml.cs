@@ -9,12 +9,15 @@ namespace DS2Mouse;
 
 public partial class MainWindow : Window
 {
+    private const string SentinelPickKey = "__pick_key__";
+
     private readonly DualSenseReader _reader;
     private readonly MapperEngine _mapper;
     private readonly AppConfig _config;
     private readonly FullscreenGuard _guard;
     private readonly LocalizationService _loc;
     private bool _initialized;
+    private bool _populatingCombos;
 
     public MainWindow()
     {
@@ -102,6 +105,9 @@ public partial class MainWindow : Window
         // DynamicResource handles XAML labels; refresh strings we set in code.
         SetConnectionLabel(_reader.ConnectionType);
         UpdateGuardStatus();
+        // Dynamic Key items embed the localized "Key:" prefix as plain text,
+        // so rebuild the combos to pick up the new language.
+        PopulateMappingCombos();
     }
 
     private void OnEnableToggle(object sender, RoutedEventArgs e)
@@ -182,21 +188,33 @@ public partial class MainWindow : Window
 
     private void PopulateMappingCombos()
     {
-        foreach (var combo in MappingCombos())
+        _populatingCombos = true;
+        try
         {
-            combo.Items.Clear();
-            foreach (var id in ButtonActions.All)
+            foreach (var combo in MappingCombos())
             {
-                var item = new ComboBoxItem { Tag = id };
-                // SetResourceReference makes the displayed label track the
-                // current language dictionary, so it updates on language swap.
-                item.SetResourceReference(ContentControl.ContentProperty, $"Mapping.{id}");
-                combo.Items.Add(item);
-            }
+                combo.Items.Clear();
+                foreach (var id in ButtonActions.All)
+                {
+                    var item = new ComboBoxItem { Tag = id };
+                    // SetResourceReference makes the displayed label track the
+                    // current language dictionary, so it updates on language swap.
+                    item.SetResourceReference(ContentControl.ContentProperty, $"Mapping.{id}");
+                    combo.Items.Add(item);
+                }
+                // Sentinel that triggers the on-screen-keyboard pick flow.
+                var pick = new ComboBoxItem { Tag = SentinelPickKey };
+                pick.SetResourceReference(ContentControl.ContentProperty, "Mapping.PickKey");
+                combo.Items.Add(pick);
 
-            var slot = (string)combo.Tag;
-            var current = ReadMapping(slot);
-            SelectActionInCombo(combo, current);
+                var slot = (string)combo.Tag;
+                var current = ReadMapping(slot);
+                SelectActionInCombo(combo, current);
+            }
+        }
+        finally
+        {
+            _populatingCombos = false;
         }
     }
 
@@ -234,7 +252,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private static void SelectActionInCombo(ComboBox combo, string actionId)
+    private void SelectActionInCombo(ComboBox combo, string actionId)
     {
         foreach (var obj in combo.Items)
         {
@@ -244,21 +262,110 @@ public partial class MainWindow : Window
                 return;
             }
         }
+        // Captured-key mapping not represented yet — synthesize the dynamic item.
+        if (actionId.StartsWith(ButtonActions.KeyPrefix, StringComparison.Ordinal))
+        {
+            InsertDynamicKeyItem(combo, actionId);
+            foreach (var obj in combo.Items)
+            {
+                if (obj is ComboBoxItem item && (string)item.Tag == actionId)
+                {
+                    combo.SelectedItem = item;
+                    return;
+                }
+            }
+        }
         combo.SelectedIndex = 0;
     }
 
+    private void InsertDynamicKeyItem(ComboBox combo, string keyAction)
+    {
+        if (!ButtonActions.TryParseKey(keyAction, out var vk)) return;
+        var prefix = _loc.Get("Mapping.KeyPrefix");
+        var item = new ComboBoxItem
+        {
+            Tag = keyAction,
+            Content = prefix + KeyFriendlyName(vk),
+        };
+        // Insert before the sentinel (always last item).
+        int idx = Math.Max(0, combo.Items.Count - 1);
+        combo.Items.Insert(idx, item);
+    }
+
+    private static void RemoveDynamicKeyItems(ComboBox combo)
+    {
+        for (int i = combo.Items.Count - 1; i >= 0; i--)
+        {
+            if (combo.Items[i] is ComboBoxItem item
+                && item.Tag is string tag
+                && tag.StartsWith(ButtonActions.KeyPrefix, StringComparison.Ordinal))
+            {
+                combo.Items.RemoveAt(i);
+            }
+        }
+    }
+
+    private static string KeyFriendlyName(ushort vk) => vk switch
+    {
+        0x08 => "Backspace",
+        0x09 => "Tab",
+        0x0D => "Enter",
+        0x1B => "Esc",
+        0x20 => "Space",
+        0xBC => ",",
+        0xBE => ".",
+        _ when vk >= 0x30 && vk <= 0x39 => ((char)vk).ToString(),
+        _ when vk >= 0x41 && vk <= 0x5A => ((char)vk).ToString(),
+        _ => $"0x{vk:X2}",
+    };
+
     private void OnMappingChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!_initialized) return;
+        if (!_initialized || _populatingCombos) return;
         if (sender is not ComboBox combo) return;
         if (combo.SelectedItem is not ComboBoxItem item) return;
         if (combo.Tag is not string slot || item.Tag is not string actionId) return;
+
+        if (actionId == SentinelPickKey)
+        {
+            // Don't write the sentinel — revert to current real mapping and
+            // launch the keyboard in pick mode. Result lands asynchronously.
+            var current = ReadMapping(slot);
+            _populatingCombos = true;
+            try { SelectActionInCombo(combo, current); }
+            finally { _populatingCombos = false; }
+            App.Current.Keyboard.BeginCapture(vk =>
+                Dispatcher.Invoke(() => CompleteKeyCapture(combo, slot, vk)));
+            return;
+        }
 
         // Release whatever the OLD action was holding before swapping in the
         // new one — otherwise a hold mid-swap would never receive its up event.
         _mapper.ReleaseHeldInputs();
         WriteMapping(slot, actionId);
         App.Current.SaveConfig();
+    }
+
+    private void CompleteKeyCapture(ComboBox combo, string slot, ushort? vk)
+    {
+        if (vk is null) return; // user cancelled
+        var keyAction = ButtonActions.EncodeKey(vk.Value);
+
+        _mapper.ReleaseHeldInputs();
+        WriteMapping(slot, keyAction);
+        App.Current.SaveConfig();
+
+        _populatingCombos = true;
+        try
+        {
+            RemoveDynamicKeyItems(combo);
+            InsertDynamicKeyItem(combo, keyAction);
+            SelectActionInCombo(combo, keyAction);
+        }
+        finally
+        {
+            _populatingCombos = false;
+        }
     }
 
     private void OnLanguageChanged(object sender, SelectionChangedEventArgs e)

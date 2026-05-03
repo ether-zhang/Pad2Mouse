@@ -65,6 +65,9 @@
     <s:String x:Key="Mapping.Ctrl">Ctrl</s:String>
     <s:String x:Key="Mapping.Shift">Shift</s:String>
     <s:String x:Key="Mapping.Alt">Alt</s:String>
+    <s:String x:Key="Mapping.PickKey">按键…</s:String>
+    <s:String x:Key="Mapping.KeyPrefix">按键：</s:String>
+    <s:String x:Key="Keyboard.PickHint">选择按键</s:String>
 
     <s:String x:Key="Lang.Chinese">中文</s:String>
     <s:String x:Key="Lang.English">English</s:String>

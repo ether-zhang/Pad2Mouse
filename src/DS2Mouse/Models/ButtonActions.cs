@@ -1,7 +1,12 @@
+using System.Globalization;
+
 namespace DS2Mouse.Models;
 
 /// <summary>String IDs for the user-selectable mapping target on each
-/// configurable input. Stored verbatim in config.json.</summary>
+/// configurable input. Stored verbatim in config.json.
+/// In addition to the predefined IDs below, mappings can store arbitrary
+/// virtual-keys captured from the on-screen keyboard, encoded as
+/// <c>Key:0xNN</c> (e.g. <c>Key:0x41</c> for VK_A).</summary>
 public static class ButtonActions
 {
     public const string None        = "None";
@@ -19,6 +24,8 @@ public static class ButtonActions
     public const string Shift       = "Shift";
     public const string Alt         = "Alt";
 
+    public const string KeyPrefix = "Key:";
+
     public static readonly string[] All =
     {
         None, LeftClick, RightClick, MiddleClick,
@@ -29,7 +36,20 @@ public static class ButtonActions
 
     public static bool IsHold(string id) =>
         id == LeftHold || id == RightHold || id == MiddleHold
-        || id == Ctrl || id == Shift || id == Alt;
+        || id == Ctrl || id == Shift || id == Alt
+        || id.StartsWith(KeyPrefix, StringComparison.Ordinal);
+
+    public static string EncodeKey(ushort vk) =>
+        $"{KeyPrefix}0x{vk:X2}";
+
+    public static bool TryParseKey(string id, out ushort vk)
+    {
+        vk = 0;
+        if (!id.StartsWith(KeyPrefix, StringComparison.Ordinal)) return false;
+        var hex = id.AsSpan(KeyPrefix.Length);
+        if (hex.StartsWith("0x") || hex.StartsWith("0X")) hex = hex[2..];
+        return ushort.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out vk);
+    }
 }
 
 public sealed class ButtonMappings
