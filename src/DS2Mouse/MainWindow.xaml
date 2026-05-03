@@ -45,7 +45,7 @@
                             <RowDefinition/><RowDefinition/><RowDefinition/>
                             <RowDefinition/><RowDefinition/><RowDefinition/>
                             <RowDefinition/><RowDefinition/><RowDefinition/>
-                            <RowDefinition/>
+                            <RowDefinition/><RowDefinition/>
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.LeftStick}"/>
@@ -83,6 +83,9 @@
 
                         <TextBlock Grid.Row="9" Grid.Column="0" FontFamily="Consolas" Text="L3 + R3"/>
                         <TextBlock Grid.Row="9" Grid.Column="1" Text="{DynamicResource Mapping.ToggleApp}"/>
+
+                        <TextBlock Grid.Row="10" Grid.Column="0" FontFamily="Consolas" Text="L1 + R1"/>
+                        <TextBlock Grid.Row="10" Grid.Column="1" Text="{DynamicResource Mapping.OnScreenKeyboard}"/>
                     </Grid>
                 </StackPanel>
 

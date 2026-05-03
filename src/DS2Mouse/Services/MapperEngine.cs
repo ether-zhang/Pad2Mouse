@@ -54,6 +54,10 @@ public sealed class MapperEngine : IDisposable
     /// <summary>Returns true if input should be suppressed (e.g. fullscreen guard).</summary>
     public Func<bool> Gate { get; set; } = static () => false;
 
+    /// <summary>Invoked on the rising edge of the on-screen-keyboard combo (L1+R1).
+    /// The caller wires this to show/hide our custom keyboard window.</summary>
+    public Action OnSystemKeyboardToggle { get; set; } = static () => { };
+
     public event Action<bool>? EnabledChanged;
 
     public MapperEngine(DualSenseReader reader, AppConfig config)
@@ -110,6 +114,7 @@ public sealed class MapperEngine : IDisposable
         ProcessRightStick(s);
         ProcessTriggers(s);
         ProcessButtons(s, newlyPressed);
+        ProcessSystemShortcuts(s);
 
         _prevButtons = s.Buttons;
         _lastTickStamp = Environment.TickCount64;
@@ -215,6 +220,20 @@ public sealed class MapperEngine : IDisposable
         HoldKey(newlyPressed, released, DualSenseButton.DPadDown,  VK_DOWN);
         HoldKey(newlyPressed, released, DualSenseButton.DPadLeft,  VK_LEFT);
         HoldKey(newlyPressed, released, DualSenseButton.DPadRight, VK_RIGHT);
+    }
+
+    private void ProcessSystemShortcuts(DualSenseState s)
+    {
+        // L1+R1 → toggle our in-process on-screen keyboard. Hardcoded combo,
+        // not user-configurable yet — neither L1 nor R1 maps to anything else,
+        // so there is no conflict with the per-button mappings.
+        const DualSenseButton KeyboardCombo = DualSenseButton.L1 | DualSenseButton.R1;
+        bool comboNow  = (s.Buttons    & KeyboardCombo) == KeyboardCombo;
+        bool comboPrev = (_prevButtons & KeyboardCombo) == KeyboardCombo;
+        if (comboNow && !comboPrev)
+        {
+            OnSystemKeyboardToggle();
+        }
     }
 
     /// <summary>Apply a configurable action on the rising/falling edge of an

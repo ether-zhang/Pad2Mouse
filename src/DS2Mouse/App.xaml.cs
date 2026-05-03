@@ -16,6 +16,7 @@ public partial class App : Application
     private FullscreenGuard? _guard;
     private LocalizationService? _loc;
     private MainWindow? _mainWindow;
+    private OnScreenKeyboardWindow? _keyboard;
     private MenuItem? _toggleMenuItem;
     private MenuItem? _showMenuItem;
     private MenuItem? _exitMenuItem;
@@ -48,6 +49,10 @@ public partial class App : Application
         _guard = new FullscreenGuard(() => _config.FullscreenWhitelist);
         _mapper.Gate = _guard.ShouldSuppress;
         _mapper.EnabledChanged += OnMapperEnabledChanged;
+
+        // Eager-create the keyboard so its first show is instant, but keep it hidden.
+        _keyboard = new OnScreenKeyboardWindow();
+        _mapper.OnSystemKeyboardToggle = _keyboard.Toggle;
 
         _reader.Start();
         _mapper.Start();
