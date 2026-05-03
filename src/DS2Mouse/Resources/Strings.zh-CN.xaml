@@ -48,6 +48,7 @@
     <s:String x:Key="Mapping.MouseScroll">滚轮（垂直）</s:String>
     <s:String x:Key="Mapping.ArrowKeys">上下左右箭头</s:String>
     <s:String x:Key="Mapping.ToggleApp">切换映射启停</s:String>
+    <s:String x:Key="Mapping.OnScreenKeyboard">打开/关闭屏幕键盘</s:String>
 
     <!-- Action options for configurable mapping dropdowns. -->
     <s:String x:Key="Mapping.None">无</s:String>
