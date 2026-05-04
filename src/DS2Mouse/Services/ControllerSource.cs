@@ -3,11 +3,10 @@ using DS2Mouse.Models;
 namespace DS2Mouse.Services;
 
 /// <summary>
-/// Multiplexes a DualSense (HID) reader and an XInput (Xbox) reader into a
-/// single <see cref="IControllerReader"/>. Whichever reader connects first
-/// becomes active; if it later disconnects and the other is connected, the
-/// active role swaps automatically. <see cref="KindChanged"/> fires on swap
-/// so consumers can refresh controller-specific UI labels.
+/// Aggregates a DualSense (HID) reader and an XInput (Xbox) reader into a
+/// single <see cref="IControllerReader"/>. Both run concurrently — inputs
+/// from any connected pad combine, and the connection display + mapping
+/// labels in the UI reflect every connected controller type.
 /// </summary>
 public sealed class ControllerSource : IControllerReader
 {
@@ -15,12 +14,20 @@ public sealed class ControllerSource : IControllerReader
     private readonly XInputReader _xinput = new();
     private readonly object _lock = new();
 
-    private IControllerReader? _active;
-
-    public ConnectionType ConnectionType => _active?.ConnectionType ?? ConnectionType.Disconnected;
-    public string? DeviceName => _active?.DeviceName;
-    public ControllerKind Kind => _active?.Kind ?? ControllerKind.None;
-    public DualSenseState? LatestState => _active?.LatestState;
+    public ConnectionType ConnectionType { get; private set; } = ConnectionType.Disconnected;
+    public string? DeviceName { get; private set; }
+    public ControllerKind Kind { get; private set; } = ControllerKind.None;
+    public DualSenseState? LatestState
+    {
+        get
+        {
+            var ds = _dualSense.LatestState;
+            var xb = _xinput.LatestState;
+            if (ds is null) return xb;
+            if (xb is null) return ds;
+            return StateMerge.Combine(ds.Value, xb.Value);
+        }
+    }
 
     public event Action<ConnectionType>? ConnectionChanged;
     public event Action<DualSenseState>? FrameReceived;
@@ -28,8 +35,12 @@ public sealed class ControllerSource : IControllerReader
 
     public ControllerSource()
     {
-        _dualSense.ConnectionChanged += c => OnChildConnection(_dualSense, c);
-        _xinput.ConnectionChanged    += c => OnChildConnection(_xinput, c);
+        _dualSense.ConnectionChanged += _ => RefreshAggregates();
+        _xinput.ConnectionChanged    += _ => RefreshAggregates();
+        _dualSense.KindChanged       += _ => RefreshAggregates();
+        _xinput.KindChanged          += _ => RefreshAggregates();
+        _dualSense.FrameReceived     += s => FrameReceived?.Invoke(s);
+        _xinput.FrameReceived        += s => FrameReceived?.Invoke(s);
     }
 
     public void Start()
@@ -42,7 +53,7 @@ public sealed class ControllerSource : IControllerReader
     {
         _dualSense.Stop();
         _xinput.Stop();
-        SwitchActive(null);
+        RefreshAggregates();
     }
 
     public void Dispose()
@@ -51,50 +62,48 @@ public sealed class ControllerSource : IControllerReader
         _xinput.Dispose();
     }
 
-    private void OnChildConnection(IControllerReader who, ConnectionType c)
+    private void RefreshAggregates()
     {
+        ControllerKind newKind;
+        ConnectionType newConn;
+        string? newName;
+
         lock (_lock)
         {
-            if (c != ConnectionType.Disconnected)
+            newKind = _dualSense.Kind | _xinput.Kind;
+
+            // Aggregate connection: USB beats BT beats Disconnected.
+            newConn = ConnectionType.Disconnected;
+            foreach (var c in new[] { _dualSense.ConnectionType, _xinput.ConnectionType })
             {
-                // First-connected wins. If we already have an active reader,
-                // ignore the new one until the active one drops.
-                if (_active == null) SwitchActive(who);
-                else if (ReferenceEquals(_active, who))
-                {
-                    // Same reader's connection refreshed (e.g. USB → BT for
-                    // DualSense) — re-emit so listeners pick up the new label.
-                    ConnectionChanged?.Invoke(c);
-                }
-                return;
+                if (c == ConnectionType.Usb) { newConn = ConnectionType.Usb; break; }
+                if (c == ConnectionType.Bluetooth) newConn = ConnectionType.Bluetooth;
             }
 
-            // Disconnect.
-            if (!ReferenceEquals(_active, who)) return;
-
-            // The active reader dropped — promote the other one if it's up.
-            var fallback = ReferenceEquals(who, _dualSense) ? (IControllerReader)_xinput : _dualSense;
-            if (fallback.ConnectionType != ConnectionType.Disconnected)
-                SwitchActive(fallback);
-            else
-                SwitchActive(null);
+            // Compose device name: " + " between non-empty children.
+            var dsName = _dualSense.DeviceName;
+            var xbName = _xinput.DeviceName;
+            newName = (dsName, xbName) switch
+            {
+                (null, null) => null,
+                (var a,  null) => a,
+                (null, var b)  => b,
+                (var a, var b) => $"{a} + {b}",
+            };
         }
+
+        bool kindChanged, connChanged, nameChanged;
+        lock (_lock)
+        {
+            kindChanged = Kind != newKind;
+            connChanged = ConnectionType != newConn;
+            nameChanged = DeviceName != newName;
+            Kind = newKind;
+            ConnectionType = newConn;
+            DeviceName = newName;
+        }
+
+        if (connChanged || nameChanged) ConnectionChanged?.Invoke(newConn);
+        if (kindChanged) KindChanged?.Invoke(newKind);
     }
-
-    private void SwitchActive(IControllerReader? next)
-    {
-        var prev = _active;
-        if (ReferenceEquals(prev, next)) return;
-
-        if (prev != null) prev.FrameReceived -= ForwardFrame;
-        _active = next;
-        if (next != null) next.FrameReceived += ForwardFrame;
-
-        var newKind = next?.Kind ?? ControllerKind.None;
-        var newConn = next?.ConnectionType ?? ConnectionType.Disconnected;
-        KindChanged?.Invoke(newKind);
-        ConnectionChanged?.Invoke(newConn);
-    }
-
-    private void ForwardFrame(DualSenseState s) => FrameReceived?.Invoke(s);
 }

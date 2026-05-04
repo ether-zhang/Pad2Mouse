@@ -4,122 +4,102 @@ using HidSharp;
 
 namespace DS2Mouse.Services;
 
+/// <summary>
+/// Opens every matching DualSense / DualSense Edge HID device and merges
+/// their inputs into a single <see cref="DualSenseState"/>. A supervisor
+/// thread re-scans periodically to pick up newly attached pads; each open
+/// device runs its own blocking-read thread.
+/// </summary>
 public sealed class DualSenseReader : IControllerReader
 {
     private const int SonyVendorId = 0x054C;
     private static readonly int[] DualSenseProductIds = { 0x0CE6, 0x0DF2 };
+    private const int ScanIntervalMs = 750;
 
     private CancellationTokenSource? _cts;
-    private Thread? _thread;
-    private HidStream? _stream;
-    private HidDevice? _device;
-    private readonly object _lock = new();
+    private Thread? _supervisor;
+    private readonly object _slotsLock = new();
+    private readonly List<DeviceSlot> _slots = new();
 
     public ConnectionType ConnectionType { get; private set; } = ConnectionType.Disconnected;
     public string? DeviceName { get; private set; }
-    public ControllerKind Kind => ControllerKind.DualSense;
+    public ControllerKind Kind { get; private set; } = ControllerKind.None;
     public DualSenseState? LatestState { get; private set; }
 
     public event Action<ConnectionType>? ConnectionChanged;
     public event Action<DualSenseState>? FrameReceived;
-#pragma warning disable CS0067 // never fires — kind is fixed for this reader
     public event Action<ControllerKind>? KindChanged;
-#pragma warning restore CS0067
 
     public void Start()
     {
-        if (_thread != null) return;
+        if (_supervisor != null) return;
         _cts = new CancellationTokenSource();
-        _thread = new Thread(() => ReadLoop(_cts.Token))
+        _supervisor = new Thread(() => SupervisorLoop(_cts.Token))
         {
             IsBackground = true,
-            Name = "DualSenseReader",
+            Name = "DualSense-Supervisor",
         };
-        _thread.Start();
+        _supervisor.Start();
     }
 
     public void Stop()
     {
         _cts?.Cancel();
-        try { _stream?.Close(); } catch { /* ignore */ }
-        _thread?.Join(1000);
-        _thread = null;
+        ShutdownAllSlots();
+        _supervisor?.Join(1500);
+        _supervisor = null;
         _cts?.Dispose();
         _cts = null;
-        SetConnection(ConnectionType.Disconnected);
+        UpdateAggregates();
     }
 
     public void Dispose() => Stop();
 
-    private void ReadLoop(CancellationToken ct)
+    private void SupervisorLoop(CancellationToken ct)
     {
-        var buf = new byte[128];
         while (!ct.IsCancellationRequested)
         {
-            if (_stream == null)
-            {
-                if (!TryConnect()) { Thread.Sleep(750); continue; }
-            }
-
-            try
-            {
-                var len = _stream!.Read(buf, 0, buf.Length);
-                if (len > 0)
-                {
-                    var state = TryParse(buf, len);
-                    if (state.HasValue)
-                    {
-                        LatestState = state.Value;
-                        FrameReceived?.Invoke(state.Value);
-                    }
-                }
-            }
-            catch (TimeoutException)
-            {
-                // expected — lets us re-check the cancellation token
-            }
-            catch
-            {
-                Teardown();
-                Thread.Sleep(500);
-            }
+            ScanAndAttach(ct);
+            PruneDeadSlots();
+            UpdateAggregates();
+            try { ct.WaitHandle.WaitOne(ScanIntervalMs); } catch { }
         }
-        Teardown();
     }
 
-    private bool TryConnect()
+    private void ScanAndAttach(CancellationToken ct)
     {
         try
         {
             var list = DeviceList.Local.GetHidDevices(SonyVendorId);
-            HidDevice? candidate = null;
             foreach (var d in list)
             {
-                if (Array.IndexOf(DualSenseProductIds, d.ProductID) >= 0)
-                {
-                    candidate = d;
-                    break;
-                }
+                if (Array.IndexOf(DualSenseProductIds, d.ProductID) < 0) continue;
+                bool already;
+                lock (_slotsLock) already = _slots.Any(s => s.DevicePath == d.DevicePath);
+                if (already) continue;
+                TryAttach(d, ct);
             }
-            if (candidate == null) return false;
+        }
+        catch
+        {
+            // Enumeration failures are transient — try again next cycle.
+        }
+    }
 
-            if (!candidate.TryOpen(out var stream)) return false;
+    private void TryAttach(HidDevice device, CancellationToken parentCt)
+    {
+        HidStream? stream = null;
+        try
+        {
+            if (!device.TryOpen(out stream)) return;
             stream.ReadTimeout = 1000;
 
-            lock (_lock)
-            {
-                _device = candidate;
-                _stream = stream;
-            }
-
-            // Determine connection type by probing input report length.
-            // USB: max input report ~64 bytes; BT: ~78 bytes for 0x31.
-            var conn = candidate.GetMaxInputReportLength() > 64
+            // USB max input report ~64 bytes; BT ~78 for 0x31.
+            var conn = device.GetMaxInputReportLength() > 64
                 ? ConnectionType.Bluetooth
                 : ConnectionType.Usb;
 
-            // For BT, request feature report 0x05 (calibration data) — the side
-            // effect is that the controller switches to extended report 0x31.
+            // For BT, request feature report 0x05 to switch to extended report 0x31.
             if (conn == ConnectionType.Bluetooth)
             {
                 try
@@ -131,15 +111,163 @@ public sealed class DualSenseReader : IControllerReader
                 catch { /* harmless if it fails — many drivers still emit 0x31 */ }
             }
 
-            DeviceName = ProductName(candidate.ProductID);
-            SetConnection(conn);
-            return true;
+            var slot = new DeviceSlot
+            {
+                DevicePath = device.DevicePath,
+                Stream = stream,
+                ConnectionType = conn,
+                ProductName = ProductName(device.ProductID),
+                Cts = CancellationTokenSource.CreateLinkedTokenSource(parentCt),
+            };
+            slot.Thread = new Thread(() => ReadSlot(slot))
+            {
+                IsBackground = true,
+                Name = $"DualSense-Read-{slot.ProductName}",
+            };
+            lock (_slotsLock) _slots.Add(slot);
+            slot.Thread.Start();
+            stream = null; // ownership transferred to slot
         }
         catch
         {
-            Teardown();
-            return false;
+            try { stream?.Close(); } catch { }
         }
+    }
+
+    private void ReadSlot(DeviceSlot slot)
+    {
+        var buf = new byte[128];
+        var ct = slot.Cts!.Token;
+        while (!ct.IsCancellationRequested && !slot.Dead)
+        {
+            try
+            {
+                var len = slot.Stream.Read(buf, 0, buf.Length);
+                if (len > 0)
+                {
+                    var state = TryParse(buf, len);
+                    if (state.HasValue)
+                    {
+                        slot.LatestState = state.Value;
+                        FrameReceived?.Invoke(state.Value);
+                        RecomputeMergedLatest();
+                    }
+                }
+            }
+            catch (TimeoutException)
+            {
+                // expected — re-check cancellation and loop
+            }
+            catch
+            {
+                slot.Dead = true;
+                break;
+            }
+        }
+        try { slot.Stream.Close(); } catch { }
+    }
+
+    private void RecomputeMergedLatest()
+    {
+        DeviceSlot[] copy;
+        lock (_slotsLock) copy = _slots.ToArray();
+        DualSenseState? merged = null;
+        foreach (var s in copy)
+        {
+            if (s.LatestState is not { } st) continue;
+            merged = merged is null ? st : StateMerge.Combine(merged.Value, st);
+        }
+        LatestState = merged;
+    }
+
+    private void PruneDeadSlots()
+    {
+        List<DeviceSlot> dead = new();
+        lock (_slotsLock)
+        {
+            for (int i = _slots.Count - 1; i >= 0; i--)
+            {
+                if (_slots[i].Dead)
+                {
+                    dead.Add(_slots[i]);
+                    _slots.RemoveAt(i);
+                }
+            }
+        }
+        foreach (var s in dead)
+        {
+            try { s.Cts?.Cancel(); } catch { }
+            try { s.Stream.Close(); } catch { }
+            s.Thread?.Join(300);
+            s.Cts?.Dispose();
+        }
+    }
+
+    private void ShutdownAllSlots()
+    {
+        DeviceSlot[] copy;
+        lock (_slotsLock) { copy = _slots.ToArray(); _slots.Clear(); }
+        foreach (var s in copy)
+        {
+            try { s.Cts?.Cancel(); } catch { }
+            try { s.Stream.Close(); } catch { }
+            s.Thread?.Join(500);
+            s.Cts?.Dispose();
+        }
+    }
+
+    private void UpdateAggregates()
+    {
+        DeviceSlot[] copy;
+        lock (_slotsLock) copy = _slots.ToArray();
+
+        // Aggregate ConnectionType: USB beats BT; none → Disconnected.
+        var newConn = copy.Length == 0
+            ? ConnectionType.Disconnected
+            : copy.Any(s => s.ConnectionType == ConnectionType.Usb)
+                ? ConnectionType.Usb
+                : ConnectionType.Bluetooth;
+        var newKind = copy.Length > 0 ? ControllerKind.DualSense : ControllerKind.None;
+        var newName = BuildDeviceName(copy);
+
+        bool nameChanged = DeviceName != newName;
+        bool connChanged = ConnectionType != newConn;
+        bool kindChanged = Kind != newKind;
+
+        DeviceName = newName;
+        ConnectionType = newConn;
+        Kind = newKind;
+        if (copy.Length == 0) LatestState = null;
+
+        if (connChanged || nameChanged) ConnectionChanged?.Invoke(newConn);
+        if (kindChanged) KindChanged?.Invoke(newKind);
+    }
+
+    private static string? BuildDeviceName(DeviceSlot[] slots)
+    {
+        if (slots.Length == 0) return null;
+
+        // Group by product name; only suffix when a group has more than one.
+        var groupCounts = new Dictionary<string, int>();
+        foreach (var s in slots)
+            groupCounts[s.ProductName] = groupCounts.GetValueOrDefault(s.ProductName) + 1;
+
+        var perGroupIndex = new Dictionary<string, int>();
+        var parts = new List<string>(slots.Length);
+        foreach (var s in slots)
+        {
+            if (groupCounts[s.ProductName] == 1)
+            {
+                parts.Add(s.ProductName);
+            }
+            else
+            {
+                int n = perGroupIndex.GetValueOrDefault(s.ProductName) + 1;
+                perGroupIndex[s.ProductName] = n;
+                parts.Add($"{s.ProductName}-{n}");
+            }
+        }
+        return string.Join(" + ", parts);
     }
 
     private static string ProductName(int productId) => productId switch
@@ -149,52 +277,23 @@ public sealed class DualSenseReader : IControllerReader
         _      => "Controller",
     };
 
-    private void Teardown()
-    {
-        lock (_lock)
-        {
-            try { _stream?.Close(); } catch { }
-            _stream = null;
-            _device = null;
-        }
-        DeviceName = null;
-        SetConnection(ConnectionType.Disconnected);
-    }
-
-    private void SetConnection(ConnectionType c)
-    {
-        if (ConnectionType == c) return;
-        ConnectionType = c;
-        ConnectionChanged?.Invoke(c);
-    }
-
     private static DualSenseState? TryParse(byte[] buf, int len)
     {
         if (len < 10) return null;
         var reportId = buf[0];
-        int o; // offset to LX
+        int o;
 
         if (reportId == 0x01 && len >= 11)
         {
-            // USB full report OR BT minimal report. Distinguish by length:
-            // USB 0x01 is 64 bytes; BT minimal 0x01 is 10 bytes.
-            // We accept both and pick offsets accordingly.
             if (len >= 64)
             {
-                // USB full
                 o = 1;
                 return ParseStandard(buf, o, hasButtons3: true);
             }
-            else
-            {
-                // BT minimal: layout differs — triggers come AFTER buttons.
-                // [1]=LX [2]=LY [3]=RX [4]=RY [5]=Btn1 [6]=Btn2 [7]=Btn3 [8]=L2 [9]=R2
-                return ParseBtMinimal(buf);
-            }
+            return ParseBtMinimal(buf);
         }
         if (reportId == 0x31 && len >= 14)
         {
-            // BT extended: data shifts by +1 vs USB (extra tag byte at index 1).
             o = 2;
             return ParseStandard(buf, o, hasButtons3: true);
         }
@@ -204,12 +303,11 @@ public sealed class DualSenseReader : IControllerReader
     private static DualSenseState ParseStandard(byte[] buf, int o, bool hasButtons3)
     {
         float lx = NormStick(buf[o + 0]);
-        float ly = -NormStick(buf[o + 1]); // invert: HID Y grows downward
+        float ly = -NormStick(buf[o + 1]);
         float rx = NormStick(buf[o + 2]);
         float ry = -NormStick(buf[o + 3]);
         float l2 = buf[o + 4] / 255f;
         float r2 = buf[o + 5] / 255f;
-        // buf[o+6] = sequence counter
         byte b1 = buf[o + 7];
         byte b2 = buf[o + 8];
         byte b3 = hasButtons3 && (o + 9) < buf.Length ? buf[o + 9] : (byte)0;
@@ -235,7 +333,6 @@ public sealed class DualSenseReader : IControllerReader
 
     private static float NormStick(byte raw)
     {
-        // 0..255 with 128 nominal center → -1..1
         var v = (raw - 128) / 127f;
         return v < -1 ? -1 : v > 1 ? 1 : v;
     }
@@ -244,7 +341,6 @@ public sealed class DualSenseReader : IControllerReader
     {
         DualSenseButton flags = DualSenseButton.None;
 
-        // b1 low nibble: D-pad direction (0=N..7=NW, 8=None)
         int dpad = b1 & 0x0F;
         flags |= dpad switch
         {
@@ -258,13 +354,11 @@ public sealed class DualSenseReader : IControllerReader
             7 => DualSenseButton.DPadUp | DualSenseButton.DPadLeft,
             _ => DualSenseButton.None,
         };
-        // b1 high nibble: face buttons
         if ((b1 & 0x10) != 0) flags |= DualSenseButton.Square;
         if ((b1 & 0x20) != 0) flags |= DualSenseButton.Cross;
         if ((b1 & 0x40) != 0) flags |= DualSenseButton.Circle;
         if ((b1 & 0x80) != 0) flags |= DualSenseButton.Triangle;
 
-        // b2: shoulder + start/select + sticks
         if ((b2 & 0x01) != 0) flags |= DualSenseButton.L1;
         if ((b2 & 0x02) != 0) flags |= DualSenseButton.R1;
         if ((b2 & 0x04) != 0) flags |= DualSenseButton.L2;
@@ -274,11 +368,22 @@ public sealed class DualSenseReader : IControllerReader
         if ((b2 & 0x40) != 0) flags |= DualSenseButton.L3;
         if ((b2 & 0x80) != 0) flags |= DualSenseButton.R3;
 
-        // b3: PS/Touchpad/Mute
         if ((b3 & 0x01) != 0) flags |= DualSenseButton.PS;
         if ((b3 & 0x02) != 0) flags |= DualSenseButton.Touchpad;
         if ((b3 & 0x04) != 0) flags |= DualSenseButton.Mute;
 
         return flags;
+    }
+
+    private sealed class DeviceSlot
+    {
+        public required string DevicePath { get; init; }
+        public required HidStream Stream { get; init; }
+        public required ConnectionType ConnectionType { get; init; }
+        public required string ProductName { get; init; }
+        public CancellationTokenSource? Cts;
+        public Thread? Thread;
+        public DualSenseState? LatestState;
+        public volatile bool Dead;
     }
 }
