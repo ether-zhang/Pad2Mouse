@@ -67,18 +67,27 @@ public partial class MainWindow : Window
 
     private void SetMappingLabels(ControllerKind kind)
     {
-        // Xbox label set when an Xbox pad is the active controller; otherwise
-        // keep PS-style symbols (also the right choice when nothing is connected,
-        // since the PS naming is what the rest of the app's text uses).
-        bool xbox = kind == ControllerKind.Xbox;
-        LblR2.Text       = xbox ? "RT"           : "R2";
-        LblL2.Text       = xbox ? "LT"           : "L2";
-        LblCross.Text    = xbox ? "A"            : "✕";
-        LblCircle.Text   = xbox ? "B"            : "○";
-        LblSquare.Text   = xbox ? "X"            : "□";
-        LblTriangle.Text = xbox ? "Y"            : "△";
-        LblL3R3.Text     = xbox ? "LSB + RSB"    : "L3 + R3";
-        LblL1R1.Text     = xbox ? "LB + RB"      : "L1 + R1";
+        // Show PS-style alone when only DualSense is connected, Xbox-style alone
+        // when only Xbox, and "PS / Xbox" combined when both are present. With
+        // nothing connected we fall back to PS naming, since the rest of the
+        // app's text already uses that style.
+        bool ds   = (kind & ControllerKind.DualSense) != 0;
+        bool xbox = (kind & ControllerKind.Xbox)      != 0;
+        LblR2.Text       = LabelFor("R2",      "RT",        ds, xbox);
+        LblL2.Text       = LabelFor("L2",      "LT",        ds, xbox);
+        LblCross.Text    = LabelFor("✕",       "A",         ds, xbox);
+        LblCircle.Text   = LabelFor("○",       "B",         ds, xbox);
+        LblSquare.Text   = LabelFor("□",       "X",         ds, xbox);
+        LblTriangle.Text = LabelFor("△",       "Y",         ds, xbox);
+        LblL3R3.Text     = LabelFor("L3 + R3", "LSB + RSB", ds, xbox);
+        LblL1R1.Text     = LabelFor("L1 + R1", "LB + RB",   ds, xbox);
+    }
+
+    private static string LabelFor(string ps, string xbox, bool dsConnected, bool xboxConnected)
+    {
+        if (dsConnected && xboxConnected) return $"{ps} / {xbox}";
+        if (xboxConnected)                return xbox;
+        return ps; // DS only or nothing connected
     }
 
     protected override void OnClosing(CancelEventArgs e)

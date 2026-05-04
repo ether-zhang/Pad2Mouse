@@ -5,31 +5,34 @@ using DS2Mouse.Models;
 namespace DS2Mouse.Services;
 
 /// <summary>
-/// Polls XInput user slots 0..3 at 125 Hz and translates the first connected
-/// gamepad into <see cref="DualSenseState"/>. This covers Xbox 360 (which
-/// does not expose standard HID gamepad), Xbox One, and Xbox Series wired
-/// or via the Xbox Wireless Adapter / Bluetooth.
+/// Polls every XInput user slot (0..3) at 125 Hz and merges all connected
+/// gamepads into a single <see cref="DualSenseState"/>. Inputs from multiple
+/// pads combine — any pad pressing a button is enough; sticks take the
+/// larger-magnitude of the two. Covers Xbox 360 (no standard HID gamepad),
+/// Xbox One, and Xbox Series via wired / Wireless Adapter / Bluetooth.
 /// </summary>
 public sealed class XInputReader : IControllerReader
 {
     private const int PollIntervalMs = 8;
     private const int ErrorSuccess = 0;
     private const int ErrorDeviceNotConnected = 1167;
+    private const string ProductName = "Xbox Controller";
 
     private CancellationTokenSource? _cts;
     private Thread? _thread;
-    private uint _activeSlot = uint.MaxValue;
+
+    // One entry per XInput user slot. Null = currently disconnected.
+    private readonly DualSenseState?[] _slotStates = new DualSenseState?[4];
+    private readonly bool[] _slotConnected = new bool[4];
 
     public ConnectionType ConnectionType { get; private set; } = ConnectionType.Disconnected;
     public string? DeviceName { get; private set; }
-    public ControllerKind Kind => ControllerKind.Xbox;
+    public ControllerKind Kind { get; private set; } = ControllerKind.None;
     public DualSenseState? LatestState { get; private set; }
 
     public event Action<ConnectionType>? ConnectionChanged;
     public event Action<DualSenseState>? FrameReceived;
-#pragma warning disable CS0067 // never fires — kind is fixed for this reader
     public event Action<ControllerKind>? KindChanged;
-#pragma warning restore CS0067
 
     public void Start()
     {
@@ -50,9 +53,9 @@ public sealed class XInputReader : IControllerReader
         _thread = null;
         _cts?.Dispose();
         _cts = null;
-        SetConnection(ConnectionType.Disconnected);
-        DeviceName = null;
-        _activeSlot = uint.MaxValue;
+        for (int i = 0; i < 4; i++) { _slotStates[i] = null; _slotConnected[i] = false; }
+        LatestState = null;
+        UpdateAggregates();
     }
 
     public void Dispose() => Stop();
@@ -63,50 +66,81 @@ public sealed class XInputReader : IControllerReader
         {
             try
             {
-                // If we already have an active slot, poll it directly. If it
-                // disconnects, fall through to the scan.
-                if (_activeSlot != uint.MaxValue)
+                DualSenseState? merged = null;
+                for (uint i = 0; i < 4; i++)
                 {
-                    var rc = XInputGetState(_activeSlot, out var st);
+                    int rc = XInputGetState(i, out var st);
                     if (rc == ErrorSuccess)
                     {
-                        EmitFrame(st);
-                        Thread.Sleep(PollIntervalMs);
-                        continue;
+                        var state = Convert(st);
+                        _slotStates[i] = state;
+                        _slotConnected[i] = true;
+                        merged = merged is null ? state : StateMerge.Combine(merged.Value, state);
+                        FrameReceived?.Invoke(state);
                     }
-                    if (rc == ErrorDeviceNotConnected)
+                    else
                     {
-                        _activeSlot = uint.MaxValue;
-                        DeviceName = null;
-                        SetConnection(ConnectionType.Disconnected);
+                        _slotStates[i] = null;
+                        _slotConnected[i] = false;
                     }
                 }
 
-                // No active slot — scan all four for a connected gamepad.
-                for (uint i = 0; i < 4; i++)
-                {
-                    if (XInputGetState(i, out var st) == ErrorSuccess)
-                    {
-                        _activeSlot = i;
-                        DeviceName = "Xbox Controller";
-                        SetConnection(ConnectionType.Usb);
-                        EmitFrame(st);
-                        break;
-                    }
-                }
+                LatestState = merged;
+                UpdateAggregates();
             }
             catch
             {
                 // never let an exception kill the poll thread
             }
-            Thread.Sleep(PollIntervalMs);
+            try { Thread.Sleep(PollIntervalMs); } catch { }
         }
     }
 
-    private void EmitFrame(XINPUT_STATE st)
+    private void UpdateAggregates()
+    {
+        int count = 0;
+        for (int i = 0; i < 4; i++) if (_slotConnected[i]) count++;
+
+        string? newName = count switch
+        {
+            0 => null,
+            1 => ProductName,
+            _ => BuildIndexedName(count),
+        };
+        var newConn = count > 0 ? ConnectionType.Usb : ConnectionType.Disconnected;
+        var newKind = count > 0 ? ControllerKind.Xbox : ControllerKind.None;
+
+        bool nameChanged = DeviceName != newName;
+        bool connChanged = ConnectionType != newConn;
+        bool kindChanged = Kind != newKind;
+
+        DeviceName = newName;
+        ConnectionType = newConn;
+        Kind = newKind;
+
+        if (connChanged || nameChanged) ConnectionChanged?.Invoke(newConn);
+        if (kindChanged) KindChanged?.Invoke(newKind);
+    }
+
+    private string BuildIndexedName(int count)
+    {
+        var parts = new string[count];
+        int n = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            if (_slotConnected[i])
+            {
+                parts[n] = $"{ProductName}-{n + 1}";
+                n++;
+            }
+        }
+        return string.Join(" + ", parts);
+    }
+
+    private static DualSenseState Convert(XINPUT_STATE st)
     {
         var g = st.Gamepad;
-        var state = new DualSenseState(
+        return new DualSenseState(
             LeftStickX:  NormStick(g.sThumbLX),
             LeftStickY:  NormStick(g.sThumbLY),  // XInput Y is already +up
             RightStickX: NormStick(g.sThumbRX),
@@ -115,14 +149,10 @@ public sealed class XInputReader : IControllerReader
             R2Trigger:   g.bRightTrigger / 255f,
             Buttons:     TranslateButtons(g.wButtons, g.bLeftTrigger, g.bRightTrigger),
             TimestampTicks: Stopwatch.GetTimestamp());
-
-        LatestState = state;
-        FrameReceived?.Invoke(state);
     }
 
     private static float NormStick(short raw)
     {
-        // Map signed 16-bit to -1..1. Negative range is one wider so clamp at -1.
         var v = raw / 32767f;
         return v < -1f ? -1f : v > 1f ? 1f : v;
     }
@@ -144,20 +174,10 @@ public sealed class XInputReader : IControllerReader
         if ((xb & XINPUT_GAMEPAD_B)              != 0) f |= DualSenseButton.Circle;
         if ((xb & XINPUT_GAMEPAD_X)              != 0) f |= DualSenseButton.Square;
         if ((xb & XINPUT_GAMEPAD_Y)              != 0) f |= DualSenseButton.Triangle;
-        // Mapper applies its own threshold to L2/R2 floats; mirror the bool flag
-        // for parity with DualSense's button bit so trigger-as-button paths
-        // (which read DualSenseButton.L2/R2) continue to work.
         const byte TriggerBit = 30;
         if (lt > TriggerBit) f |= DualSenseButton.L2;
         if (rt > TriggerBit) f |= DualSenseButton.R2;
         return f;
-    }
-
-    private void SetConnection(ConnectionType c)
-    {
-        if (ConnectionType == c) return;
-        ConnectionType = c;
-        ConnectionChanged?.Invoke(c);
     }
 
     // ----- P/Invoke -----
