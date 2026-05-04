@@ -9,7 +9,7 @@ namespace DS2Mouse;
 public partial class App : Application
 {
     private TaskbarIcon? _tray;
-    private DualSenseReader? _reader;
+    private IControllerReader? _reader;
     private MapperEngine? _mapper;
     private AppConfig? _config;
     private ConfigStore? _store;
@@ -22,7 +22,7 @@ public partial class App : Application
     private MenuItem? _exitMenuItem;
 
     public AppConfig Config => _config!;
-    public DualSenseReader Reader => _reader!;
+    public IControllerReader Reader => _reader!;
     public MapperEngine Mapper => _mapper!;
     public FullscreenGuard Guard => _guard!;
     public LocalizationService Loc => _loc!;
@@ -45,7 +45,7 @@ public partial class App : Application
         _loc.SetLanguage(_config.Language);
         _loc.LanguageChanged += UpdateTrayMenuLabels;
 
-        _reader = new DualSenseReader();
+        _reader = new ControllerSource();
         _mapper = new MapperEngine(_reader, _config);
         _guard = new FullscreenGuard(() => _config.FullscreenWhitelist);
         _mapper.Gate = _guard.ShouldSuppress;

@@ -24,7 +24,7 @@ public sealed class MapperEngine : IDisposable
     private const ushort VK_RIGHT   = 0x27;
     private const ushort VK_DOWN    = 0x28;
 
-    private readonly DualSenseReader _reader;
+    private readonly IControllerReader _reader;
     private readonly Timer _timer;
     private readonly object _tickLock = new();
 
@@ -60,7 +60,7 @@ public sealed class MapperEngine : IDisposable
 
     public event Action<bool>? EnabledChanged;
 
-    public MapperEngine(DualSenseReader reader, AppConfig config)
+    public MapperEngine(IControllerReader reader, AppConfig config)
     {
         _reader = reader;
         Config = config;
