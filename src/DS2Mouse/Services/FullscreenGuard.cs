@@ -90,6 +90,14 @@ public sealed class FullscreenGuard : IDisposable
         if (string.Equals(processName, "Pad2Mouse", StringComparison.OrdinalIgnoreCase))
             return;
 
+        // Skip the shell process entirely. Explorer hosts taskbar thumbnail
+        // switchers, jump lists, and other transient chrome windows that can
+        // momentarily report monitor-covering rects (e.g. clicking a taskbar
+        // icon for an app with multiple windows). File Explorer itself is
+        // never a game window, so exempting the process loses nothing.
+        if (string.Equals(processName, "explorer", StringComparison.OrdinalIgnoreCase))
+            return;
+
         fullscreen = IsHwndCoveringMonitor(hwnd) || QuerySystemFullscreenHint();
     }
 
