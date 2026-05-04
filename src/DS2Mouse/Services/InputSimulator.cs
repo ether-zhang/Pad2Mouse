@@ -40,11 +40,15 @@ public static class InputSimulator
 
     public static void MouseClick(MouseButton btn)
     {
+        // Splitting DOWN/UP across two SendInput calls with a small gap keeps
+        // the synthetic click closer to a real hardware click (~20 ms hold).
+        // Some shell popups — notably the Windows 11 taskbar thumbnail
+        // selector — dismiss themselves on a 0 ms batched click, so the UP
+        // ends up landing on whatever window the popup uncovers.
         var (down, up, data) = ButtonFlags(btn);
-        Span<INPUT> two = stackalloc INPUT[2];
-        two[0] = MouseInput(down, data);
-        two[1] = MouseInput(up, data);
-        SendBatch(two);
+        Send(MouseInput(down, data));
+        Thread.Sleep(20);
+        Send(MouseInput(up, data));
     }
 
     /// <summary>Wheel delta in WHEEL_DELTA units (120 = one notch).</summary>
