@@ -11,7 +11,7 @@ public partial class MainWindow : Window
 {
     private const string SentinelPickKey = "__pick_key__";
 
-    private readonly DualSenseReader _reader;
+    private readonly IControllerReader _reader;
     private readonly MapperEngine _mapper;
     private readonly AppConfig _config;
     private readonly FullscreenGuard _guard;
@@ -51,13 +51,34 @@ public partial class MainWindow : Window
         PopulateMappingCombos();
         RefreshWhitelistBox();
         SetConnectionLabel(_reader.ConnectionType);
+        SetMappingLabels(_reader.Kind);
         UpdateGuardStatus();
         _initialized = true;
 
         _reader.ConnectionChanged += OnConnectionChanged;
+        _reader.KindChanged       += OnControllerKindChanged;
         _mapper.EnabledChanged    += OnEnabledChanged;
         _guard.StateChanged       += OnGuardStateChanged;
         _loc.LanguageChanged      += OnLanguageRefresh;
+    }
+
+    private void OnControllerKindChanged(ControllerKind kind) =>
+        Dispatcher.BeginInvoke(() => SetMappingLabels(kind));
+
+    private void SetMappingLabels(ControllerKind kind)
+    {
+        // Xbox label set when an Xbox pad is the active controller; otherwise
+        // keep PS-style symbols (also the right choice when nothing is connected,
+        // since the PS naming is what the rest of the app's text uses).
+        bool xbox = kind == ControllerKind.Xbox;
+        LblR2.Text       = xbox ? "RT"           : "R2";
+        LblL2.Text       = xbox ? "LT"           : "L2";
+        LblCross.Text    = xbox ? "A"            : "✕";
+        LblCircle.Text   = xbox ? "B"            : "○";
+        LblSquare.Text   = xbox ? "X"            : "□";
+        LblTriangle.Text = xbox ? "Y"            : "△";
+        LblL3R3.Text     = xbox ? "LSB + RSB"    : "L3 + R3";
+        LblL1R1.Text     = xbox ? "LB + RB"      : "L1 + R1";
     }
 
     protected override void OnClosing(CancelEventArgs e)

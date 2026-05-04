@@ -4,7 +4,7 @@ using HidSharp;
 
 namespace DS2Mouse.Services;
 
-public sealed class DualSenseReader : IDisposable
+public sealed class DualSenseReader : IControllerReader
 {
     private const int SonyVendorId = 0x054C;
     private static readonly int[] DualSenseProductIds = { 0x0CE6, 0x0DF2 };
@@ -17,10 +17,14 @@ public sealed class DualSenseReader : IDisposable
 
     public ConnectionType ConnectionType { get; private set; } = ConnectionType.Disconnected;
     public string? DeviceName { get; private set; }
+    public ControllerKind Kind => ControllerKind.DualSense;
     public DualSenseState? LatestState { get; private set; }
 
     public event Action<ConnectionType>? ConnectionChanged;
     public event Action<DualSenseState>? FrameReceived;
+#pragma warning disable CS0067 // never fires — kind is fixed for this reader
+    public event Action<ControllerKind>? KindChanged;
+#pragma warning restore CS0067
 
     public void Start()
     {
