@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq;
 using DS2Mouse.Models;
 using HidSharp;
 
@@ -25,6 +26,7 @@ public sealed class DualSenseReader : IControllerReader
     public string? DeviceName { get; private set; }
     public ControllerKind Kind { get; private set; } = ControllerKind.None;
     public DualSenseState? LatestState { get; private set; }
+    public IReadOnlyList<ConnectedDevice> ConnectedDevices { get; private set; } = Array.Empty<ConnectedDevice>();
 
     public event Action<ConnectionType>? ConnectionChanged;
     public event Action<DualSenseState>? FrameReceived;
@@ -74,10 +76,42 @@ public sealed class DualSenseReader : IControllerReader
             foreach (var d in list)
             {
                 if (Array.IndexOf(DualSenseProductIds, d.ProductID) < 0) continue;
+
+                // Already attached on this exact HID node — skip.
                 bool already;
                 lock (_slotsLock) already = _slots.Any(s => s.DevicePath == d.DevicePath);
                 if (already) continue;
-                TryAttach(d, ct);
+
+                // Same physical controller via the OTHER transport (BT vs USB)?
+                // The pad's serial number is stable across connection types, so
+                // we use it to detect the duplicate. Without a serial we can't
+                // dedupe — fall through to attach (worst case: two slots until
+                // one drops, which is the existing behavior anyway).
+                var newConn = d.GetMaxInputReportLength() > 64
+                    ? ConnectionType.Bluetooth
+                    : ConnectionType.Usb;
+                var serial = SafeGetSerial(d);
+                DeviceSlot? supersedes = null;
+                if (serial != null)
+                {
+                    DeviceSlot? sameSerial;
+                    lock (_slotsLock)
+                        sameSerial = _slots.FirstOrDefault(
+                            s => !s.Dead && s.SerialNumber == serial);
+
+                    if (sameSerial != null)
+                    {
+                        // Prefer USB over BT — same controller, USB is lower latency
+                        // and survives sleep better. If the new connection isn't an
+                        // upgrade we just skip; the existing slot keeps streaming.
+                        bool upgrade = sameSerial.ConnectionType == ConnectionType.Bluetooth
+                                       && newConn == ConnectionType.Usb;
+                        if (!upgrade) continue;
+                        supersedes = sameSerial;
+                    }
+                }
+
+                TryAttach(d, ct, serial, supersedes);
             }
         }
         catch
@@ -86,7 +120,14 @@ public sealed class DualSenseReader : IControllerReader
         }
     }
 
-    private void TryAttach(HidDevice device, CancellationToken parentCt)
+    private static string? SafeGetSerial(HidDevice d)
+    {
+        try { return d.GetSerialNumber(); }
+        catch { return null; }
+    }
+
+    private void TryAttach(HidDevice device, CancellationToken parentCt,
+                           string? serial, DeviceSlot? supersedes)
     {
         HidStream? stream = null;
         try
@@ -117,6 +158,7 @@ public sealed class DualSenseReader : IControllerReader
                 Stream = stream,
                 ConnectionType = conn,
                 ProductName = ProductName(device.ProductID),
+                SerialNumber = serial,
                 Cts = CancellationTokenSource.CreateLinkedTokenSource(parentCt),
             };
             slot.Thread = new Thread(() => ReadSlot(slot))
@@ -124,7 +166,14 @@ public sealed class DualSenseReader : IControllerReader
                 IsBackground = true,
                 Name = $"DualSense-Read-{slot.ProductName}",
             };
-            lock (_slotsLock) _slots.Add(slot);
+            lock (_slotsLock)
+            {
+                // Mark the old transport's slot dead only after the new one is
+                // ready — if open had failed we'd want to keep the old slot
+                // streaming. PruneDeadSlots picks it up on the next cycle.
+                if (supersedes != null) supersedes.Dead = true;
+                _slots.Add(slot);
+            }
             slot.Thread.Start();
             stream = null; // ownership transferred to slot
         }
@@ -228,7 +277,8 @@ public sealed class DualSenseReader : IControllerReader
                 ? ConnectionType.Usb
                 : ConnectionType.Bluetooth;
         var newKind = copy.Length > 0 ? ControllerKind.DualSense : ControllerKind.None;
-        var newName = BuildDeviceName(copy);
+        var newDevices = BuildConnectedDevices(copy);
+        var newName = newDevices.Count == 0 ? null : string.Join(" + ", newDevices.Select(d => d.Name));
 
         bool nameChanged = DeviceName != newName;
         bool connChanged = ConnectionType != newConn;
@@ -237,37 +287,42 @@ public sealed class DualSenseReader : IControllerReader
         DeviceName = newName;
         ConnectionType = newConn;
         Kind = newKind;
+        ConnectedDevices = newDevices;
         if (copy.Length == 0) LatestState = null;
 
         if (connChanged || nameChanged) ConnectionChanged?.Invoke(newConn);
         if (kindChanged) KindChanged?.Invoke(newKind);
     }
 
-    private static string? BuildDeviceName(DeviceSlot[] slots)
+    // Per-slot {Name, ConnectionType} entries. Names follow the same suffix
+    // rule as the aggregate string: bare product name when only one of that
+    // product is attached; "ProductName-N" when multiple of the same product.
+    private static IReadOnlyList<ConnectedDevice> BuildConnectedDevices(DeviceSlot[] slots)
     {
-        if (slots.Length == 0) return null;
+        if (slots.Length == 0) return Array.Empty<ConnectedDevice>();
 
-        // Group by product name; only suffix when a group has more than one.
         var groupCounts = new Dictionary<string, int>();
         foreach (var s in slots)
             groupCounts[s.ProductName] = groupCounts.GetValueOrDefault(s.ProductName) + 1;
 
         var perGroupIndex = new Dictionary<string, int>();
-        var parts = new List<string>(slots.Length);
+        var list = new List<ConnectedDevice>(slots.Length);
         foreach (var s in slots)
         {
+            string name;
             if (groupCounts[s.ProductName] == 1)
             {
-                parts.Add(s.ProductName);
+                name = s.ProductName;
             }
             else
             {
                 int n = perGroupIndex.GetValueOrDefault(s.ProductName) + 1;
                 perGroupIndex[s.ProductName] = n;
-                parts.Add($"{s.ProductName}-{n}");
+                name = $"{s.ProductName}-{n}";
             }
+            list.Add(new ConnectedDevice(name, s.ConnectionType));
         }
-        return string.Join(" + ", parts);
+        return list;
     }
 
     private static string ProductName(int productId) => productId switch
@@ -381,6 +436,11 @@ public sealed class DualSenseReader : IControllerReader
         public required HidStream Stream { get; init; }
         public required ConnectionType ConnectionType { get; init; }
         public required string ProductName { get; init; }
+        // Serial number identifies the physical controller across connection
+        // types (USB / BT). Used to dedupe a single controller that appears
+        // simultaneously on both transports. Null means the device didn't
+        // expose one — fall back to DevicePath uniqueness.
+        public string? SerialNumber { get; init; }
         public CancellationTokenSource? Cts;
         public Thread? Thread;
         public DualSenseState? LatestState;

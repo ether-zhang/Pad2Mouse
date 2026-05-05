@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using DS2Mouse.Models;
 
@@ -29,6 +30,7 @@ public sealed class XInputReader : IControllerReader
     public string? DeviceName { get; private set; }
     public ControllerKind Kind { get; private set; } = ControllerKind.None;
     public DualSenseState? LatestState { get; private set; }
+    public IReadOnlyList<ConnectedDevice> ConnectedDevices { get; private set; } = Array.Empty<ConnectedDevice>();
 
     public event Action<ConnectionType>? ConnectionChanged;
     public event Action<DualSenseState>? FrameReceived;
@@ -101,12 +103,10 @@ public sealed class XInputReader : IControllerReader
         int count = 0;
         for (int i = 0; i < 4; i++) if (_slotConnected[i]) count++;
 
-        string? newName = count switch
-        {
-            0 => null,
-            1 => ProductName,
-            _ => BuildIndexedName(count),
-        };
+        var newDevices = BuildConnectedDevices(count);
+        string? newName = newDevices.Count == 0
+            ? null
+            : string.Join(" + ", newDevices.Select(d => d.Name));
         var newConn = count > 0 ? ConnectionType.Usb : ConnectionType.Disconnected;
         var newKind = count > 0 ? ControllerKind.Xbox : ControllerKind.None;
 
@@ -117,24 +117,28 @@ public sealed class XInputReader : IControllerReader
         DeviceName = newName;
         ConnectionType = newConn;
         Kind = newKind;
+        ConnectedDevices = newDevices;
 
         if (connChanged || nameChanged) ConnectionChanged?.Invoke(newConn);
         if (kindChanged) KindChanged?.Invoke(newKind);
     }
 
-    private string BuildIndexedName(int count)
+    private IReadOnlyList<ConnectedDevice> BuildConnectedDevices(int count)
     {
-        var parts = new string[count];
+        if (count == 0) return Array.Empty<ConnectedDevice>();
+        var list = new List<ConnectedDevice>(count);
         int n = 0;
         for (int i = 0; i < 4; i++)
         {
             if (_slotConnected[i])
             {
-                parts[n] = $"{ProductName}-{n + 1}";
                 n++;
+                // Single connected pad → bare "Xbox Controller"; multiple → "-N" suffix.
+                var name = count == 1 ? ProductName : $"{ProductName}-{n}";
+                list.Add(new ConnectedDevice(name, ConnectionType.Usb));
             }
         }
-        return string.Join(" + ", parts);
+        return list;
     }
 
     private static DualSenseState Convert(XINPUT_STATE st)

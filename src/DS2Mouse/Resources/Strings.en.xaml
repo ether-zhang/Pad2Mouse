@@ -11,6 +11,8 @@
     <s:String x:Key="Status.Disconnected">Disconnected</s:String>
     <s:String x:Key="Status.UsbConnected">Connected (USB)</s:String>
     <s:String x:Key="Status.BtConnected">Connected (Bluetooth)</s:String>
+    <s:String x:Key="Conn.Usb">USB</s:String>
+    <s:String x:Key="Conn.Bt">Bluetooth</s:String>
 
     <s:String x:Key="Action.EnableMapping">Enable mapping</s:String>
     <s:String x:Key="Action.ShowWindow">Show window</s:String>

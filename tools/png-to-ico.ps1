@@ -1,7 +1,10 @@
 param(
     [Parameter(Mandatory=$true)] [string] $InputPng,
     [Parameter(Mandatory=$true)] [string] $OutputIco,
-    [int[]] $Sizes = @(16, 24, 32, 48, 64, 128, 256)
+    [int[]] $Sizes = @(16, 24, 32, 48, 64, 128, 256),
+    [double] $Scale = 1.0   # >1 enlarges the source within each canvas (transparent
+                            # padding around the artwork moves off-canvas, so the
+                            # visible art ends up taking more of the icon).
 )
 
 Add-Type -AssemblyName System.Drawing
@@ -18,7 +21,11 @@ try {
             $g.PixelOffsetMode      = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
             $g.CompositingQuality   = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
             $g.Clear([System.Drawing.Color]::Transparent)
-            $g.DrawImage($src, 0, 0, $s, $s)
+            $drawW = [int]($s * $Scale)
+            $drawH = [int]($s * $Scale)
+            $x = [int](($s - $drawW) / 2)
+            $y = [int](($s - $drawH) / 2)
+            $g.DrawImage($src, $x, $y, $drawW, $drawH)
         } finally { $g.Dispose() }
 
         $ms = New-Object System.IO.MemoryStream

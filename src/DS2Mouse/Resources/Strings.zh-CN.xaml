@@ -11,6 +11,8 @@
     <s:String x:Key="Status.Disconnected">未连接</s:String>
     <s:String x:Key="Status.UsbConnected">已连接 (USB)</s:String>
     <s:String x:Key="Status.BtConnected">已连接 (蓝牙)</s:String>
+    <s:String x:Key="Conn.Usb">USB</s:String>
+    <s:String x:Key="Conn.Bt">蓝牙</s:String>
 
     <s:String x:Key="Action.EnableMapping">启用映射</s:String>
     <s:String x:Key="Action.ShowWindow">显示窗口</s:String>

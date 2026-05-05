@@ -14,6 +14,11 @@ public interface IControllerReader : IDisposable
     ControllerKind Kind { get; }
     DualSenseState? LatestState { get; }
 
+    /// <summary>One entry per attached physical controller, in display order.
+    /// Used by the UI to render multi-device status as separate lines with
+    /// per-device connection type. Empty when nothing is connected.</summary>
+    IReadOnlyList<ConnectedDevice> ConnectedDevices { get; }
+
     event Action<ConnectionType>? ConnectionChanged;
     event Action<DualSenseState>? FrameReceived;
 
@@ -25,3 +30,5 @@ public interface IControllerReader : IDisposable
     void Start();
     void Stop();
 }
+
+public readonly record struct ConnectedDevice(string Name, ConnectionType ConnectionType);
