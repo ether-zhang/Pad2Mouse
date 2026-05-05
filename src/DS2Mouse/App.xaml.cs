@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using DS2Mouse.Models;
 using DS2Mouse.Services;
 using Hardcodet.Wpf.TaskbarNotification;
@@ -50,6 +51,8 @@ public partial class App : Application
         _guard = new FullscreenGuard(() => _config.FullscreenWhitelist);
         _mapper.Gate = _guard.ShouldSuppress;
         _mapper.EnabledChanged += OnMapperEnabledChanged;
+        _reader.KindChanged += OnControllerKindChanged;
+        UpdateAccentBrush(_reader.Kind);
 
         // Eager-create the keyboard so its first show is instant, but keep it hidden.
         _keyboard = new OnScreenKeyboardWindow();
@@ -102,6 +105,46 @@ public partial class App : Application
         if (_toggleMenuItem != null) _toggleMenuItem.Header = Loc.Get("Action.EnableMapping");
         if (_showMenuItem   != null) _showMenuItem.Header   = Loc.Get("Action.ShowWindow");
         if (_exitMenuItem   != null) _exitMenuItem.Header   = Loc.Get("Action.Exit");
+    }
+
+    // The window background is a muted, controller-tinted dark; the accent is
+    // the saturated version used for slider fills, focus borders, tab
+    // indicators, etc. Both are swapped on KindChanged. None keeps the
+    // previous color so the UI doesn't snap back to neutral when the user
+    // briefly unplugs.
+    private static readonly Color PsBackground   = Color.FromRgb(0x1A, 0x35, 0x50);
+    private static readonly Color XboxBackground = Color.FromRgb(0x1A, 0x3A, 0x1A);
+    private static readonly Color PsAccent       = Color.FromRgb(0x4F, 0xC3, 0xF7);
+    private static readonly Color XboxAccent     = Color.FromRgb(0x8B, 0xC3, 0x4A);
+
+    private void OnControllerKindChanged(ControllerKind kind) =>
+        Dispatcher.BeginInvoke(() => UpdateAccentBrush(kind));
+
+    private void UpdateAccentBrush(ControllerKind kind)
+    {
+        (Brush? bg, Brush? accent) = kind switch
+        {
+            ControllerKind.DualSense                       => ((Brush?)Solid(PsBackground),   (Brush?)Solid(PsAccent)),
+            ControllerKind.Xbox                            => ((Brush?)Solid(XboxBackground), (Brush?)Solid(XboxAccent)),
+            ControllerKind.DualSense | ControllerKind.Xbox => ((Brush?)Gradient(PsBackground, XboxBackground),
+                                                               (Brush?)Gradient(PsAccent,     XboxAccent)),
+            _                                              => ((Brush?)null, (Brush?)null), // keep previous
+        };
+        if (bg     != null) Resources["WindowBackground"] = bg;
+        if (accent != null) Resources["AccentBrush"]      = accent;
+
+        static SolidColorBrush Solid(Color c)
+        {
+            var b = new SolidColorBrush(c);
+            b.Freeze();
+            return b;
+        }
+        static LinearGradientBrush Gradient(Color a, Color b)
+        {
+            var g = new LinearGradientBrush(a, b, new Point(0, 0), new Point(1, 0));
+            g.Freeze();
+            return g;
+        }
     }
 
     private void OnMapperEnabledChanged(bool enabled) => Dispatcher.BeginInvoke(() =>

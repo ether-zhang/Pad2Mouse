@@ -1,3 +1,4 @@
+using System.Linq;
 using DS2Mouse.Models;
 
 namespace DS2Mouse.Services;
@@ -17,6 +18,7 @@ public sealed class ControllerSource : IControllerReader
     public ConnectionType ConnectionType { get; private set; } = ConnectionType.Disconnected;
     public string? DeviceName { get; private set; }
     public ControllerKind Kind { get; private set; } = ControllerKind.None;
+    public IReadOnlyList<ConnectedDevice> ConnectedDevices { get; private set; } = Array.Empty<ConnectedDevice>();
     public DualSenseState? LatestState
     {
         get
@@ -67,6 +69,7 @@ public sealed class ControllerSource : IControllerReader
         ControllerKind newKind;
         ConnectionType newConn;
         string? newName;
+        IReadOnlyList<ConnectedDevice> newDevices;
 
         lock (_lock)
         {
@@ -80,16 +83,17 @@ public sealed class ControllerSource : IControllerReader
                 if (c == ConnectionType.Bluetooth) newConn = ConnectionType.Bluetooth;
             }
 
-            // Compose device name: " + " between non-empty children.
-            var dsName = _dualSense.DeviceName;
-            var xbName = _xinput.DeviceName;
-            newName = (dsName, xbName) switch
-            {
-                (null, null) => null,
-                (var a,  null) => a,
-                (null, var b)  => b,
-                (var a, var b) => $"{a} + {b}",
-            };
+            // Per-physical-device list, DualSense entries first, Xbox second
+            // (matches the PS-before-Xbox order the mapping labels use).
+            var combined = new List<ConnectedDevice>(_dualSense.ConnectedDevices.Count + _xinput.ConnectedDevices.Count);
+            combined.AddRange(_dualSense.ConnectedDevices);
+            combined.AddRange(_xinput.ConnectedDevices);
+            newDevices = combined;
+
+            // Legacy aggregate string used for tooltips / one-liner displays.
+            // The status panel now reads ConnectedDevices directly so it can
+            // render multi-line.
+            newName = combined.Count == 0 ? null : string.Join(" + ", combined.Select(d => d.Name));
         }
 
         bool kindChanged, connChanged, nameChanged;
@@ -101,6 +105,7 @@ public sealed class ControllerSource : IControllerReader
             Kind = newKind;
             ConnectionType = newConn;
             DeviceName = newName;
+            ConnectedDevices = newDevices;
         }
 
         if (connChanged || nameChanged) ConnectionChanged?.Invoke(newConn);

@@ -101,6 +101,27 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
+    private void OnMinClick(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState.Minimized;
+
+    private void OnMaxClick(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
+    // Goes through OnClosing → hide-to-tray. Tray menu's Exit owns real shutdown.
+    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
+
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        // Swap the maximize button glyph to the "restore" pair when maximized.
+        // Both glyphs are Segoe MDL2 Assets code points.
+        MaxBtn.Content = WindowState == WindowState.Maximized
+            ? ""   // restore (overlapping squares)
+            : "";  // maximize (single square)
+    }
+
     private void OnGuardStateChanged() => Dispatcher.BeginInvoke(UpdateGuardStatus);
 
     private void UpdateGuardStatus()
@@ -118,14 +139,24 @@ public partial class MainWindow : Window
 
     private void SetConnectionLabel(ConnectionType c)
     {
-        var baseLabel = c switch
+        var devices = _reader.ConnectedDevices;
+        if (devices.Count == 0)
         {
-            ConnectionType.Usb       => _loc.Get("Status.UsbConnected"),
-            ConnectionType.Bluetooth => _loc.Get("Status.BtConnected"),
-            _                        => _loc.Get("Status.Disconnected"),
-        };
-        var device = _reader.DeviceName;
-        ConnText.Text = string.IsNullOrEmpty(device) ? baseLabel : $"{baseLabel} — {device}";
+            ConnText.Text = _loc.Get("Status.Disconnected");
+            return;
+        }
+        // One line per physical device, e.g. "DualSense Edge(蓝牙)\nXbox Controller(USB)".
+        var lines = devices.Select(d =>
+        {
+            var tag = d.ConnectionType switch
+            {
+                ConnectionType.Bluetooth => _loc.Get("Conn.Bt"),
+                ConnectionType.Usb       => _loc.Get("Conn.Usb"),
+                _                        => string.Empty,
+            };
+            return string.IsNullOrEmpty(tag) ? d.Name : $"{d.Name}({tag})";
+        });
+        ConnText.Text = string.Join('\n', lines);
     }
 
     private void OnEnabledChanged(bool enabled) => Dispatcher.BeginInvoke(() => EnableCheck.IsChecked = enabled);
