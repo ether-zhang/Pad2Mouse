@@ -1,7 +1,9 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using DS2Mouse.Models;
 using DS2Mouse.Services;
 
@@ -18,6 +20,17 @@ public partial class MainWindow : Window
     private readonly LocalizationService _loc;
     private bool _initialized;
     private bool _populatingCombos;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, uint attr, ref uint value, uint size);
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        var hwnd = new WindowInteropHelper(this).Handle;
+        uint round = 2; // DWMWCP_ROUND
+        DwmSetWindowAttribute(hwnd, 33, ref round, 4); // DWMWA_WINDOW_CORNER_PREFERENCE
+    }
 
     public MainWindow()
     {
@@ -62,8 +75,14 @@ public partial class MainWindow : Window
         _loc.LanguageChanged      += OnLanguageRefresh;
     }
 
-    private void OnControllerKindChanged(ControllerKind kind) =>
+    private void OnControllerKindChanged(ControllerKind kind)
+    {
+        // Keep the last connected style when the user unplugs everything —
+        // snapping back to PS defaults mid-session is jarring. Mirrors the
+        // same "keep previous" behavior in App.UpdateAccentBrush.
+        if (kind == ControllerKind.None) return;
         Dispatcher.BeginInvoke(() => SetMappingLabels(kind));
+    }
 
     private void SetMappingLabels(ControllerKind kind)
     {

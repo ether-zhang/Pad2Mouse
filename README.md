@@ -56,7 +56,7 @@ dotnet publish src/DS2Mouse/DS2Mouse.csproj `
   -p:PublishSingleFile=true
 ```
 
-`publish/DS2Mouse.exe` 拷贝到目标机器双击即可运行；`config.json` 自动出现在同目录。
+`publish/Pad2Mouse.exe` 拷贝到目标机器双击即可运行；`config.json` 自动出现在同目录。
 
 ## 配置文件示例 (`config.json`)
 

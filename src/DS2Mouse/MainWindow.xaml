@@ -76,7 +76,7 @@
 
                 <Separator Margin="0,12,0,12"/>
 
-                <!-- Button mapping reference -->
+                <!-- Button mapping reference: 2 entries per row -->
                 <StackPanel Margin="0,0,0,8">
                     <TextBlock Text="{DynamicResource Section.Mapping}" FontWeight="Bold" Margin="0,0,0,4"/>
                     <Grid>
@@ -86,54 +86,54 @@
                             </Style>
                         </Grid.Resources>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="80"/>   <!-- label 1 -->
+                            <ColumnDefinition Width="*"/>    <!-- value 1 -->
+                            <ColumnDefinition Width="16"/>   <!-- gap -->
+                            <ColumnDefinition Width="80"/>   <!-- label 2 -->
+                            <ColumnDefinition Width="*"/>    <!-- value 2 -->
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition/><RowDefinition/><RowDefinition/>
                             <RowDefinition/><RowDefinition/><RowDefinition/>
-                            <RowDefinition/><RowDefinition/><RowDefinition/>
-                            <RowDefinition/><RowDefinition/>
                         </Grid.RowDefinitions>
 
+                        <!-- Rows 0-2: fixed (non-configurable) mappings -->
                         <TextBlock Grid.Row="0" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.LeftStick}"/>
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{DynamicResource Mapping.MouseMove}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="3" FontFamily="Consolas" Text="{DynamicResource Mapping.RightStick}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="4" Text="{DynamicResource Mapping.MouseScroll}"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.RightStick}"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{DynamicResource Mapping.MouseScroll}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.DPad}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{DynamicResource Mapping.ArrowKeys}"/>
+                        <TextBlock x:Name="LblL3R3" Grid.Row="1" Grid.Column="3" FontFamily="Consolas" Text="L3 + R3"/>
+                        <TextBlock Grid.Row="1" Grid.Column="4" Text="{DynamicResource Mapping.ToggleApp}"/>
 
-                        <TextBlock x:Name="LblR2" Grid.Row="2" Grid.Column="0" FontFamily="Consolas" Text="R2"/>
-                        <ComboBox Grid.Row="2" Grid.Column="1" x:Name="MapR2Combo" Tag="R2"
-                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
+                        <TextBlock x:Name="LblL1R1" Grid.Row="2" Grid.Column="0" FontFamily="Consolas" Text="L1 + R1"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" Text="{DynamicResource Mapping.OnScreenKeyboard}"/>
 
+                        <!-- Rows 3-5: configurable button mappings (L2 left, R2 right) -->
                         <TextBlock x:Name="LblL2" Grid.Row="3" Grid.Column="0" FontFamily="Consolas" Text="L2"/>
                         <ComboBox Grid.Row="3" Grid.Column="1" x:Name="MapL2Combo" Tag="L2"
                                   SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
+                        <TextBlock x:Name="LblR2" Grid.Row="3" Grid.Column="3" FontFamily="Consolas" Text="R2"/>
+                        <ComboBox Grid.Row="3" Grid.Column="4" x:Name="MapR2Combo" Tag="R2"
+                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
 
+                        <!-- Row 4: ✕ | ○ -->
                         <TextBlock x:Name="LblCross" Grid.Row="4" Grid.Column="0" FontFamily="Consolas" Text="✕"/>
                         <ComboBox Grid.Row="4" Grid.Column="1" x:Name="MapCrossCombo" Tag="Cross"
                                   SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
-
-                        <TextBlock x:Name="LblCircle" Grid.Row="5" Grid.Column="0" FontFamily="Consolas" Text="○"/>
-                        <ComboBox Grid.Row="5" Grid.Column="1" x:Name="MapCircleCombo" Tag="Circle"
+                        <TextBlock x:Name="LblCircle" Grid.Row="4" Grid.Column="3" FontFamily="Consolas" Text="○"/>
+                        <ComboBox Grid.Row="4" Grid.Column="4" x:Name="MapCircleCombo" Tag="Circle"
                                   SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
 
-                        <TextBlock x:Name="LblSquare" Grid.Row="6" Grid.Column="0" FontFamily="Consolas" Text="□"/>
-                        <ComboBox Grid.Row="6" Grid.Column="1" x:Name="MapSquareCombo" Tag="Square"
+                        <!-- Row 5: □ | △ -->
+                        <TextBlock x:Name="LblSquare" Grid.Row="5" Grid.Column="0" FontFamily="Consolas" Text="□"/>
+                        <ComboBox Grid.Row="5" Grid.Column="1" x:Name="MapSquareCombo" Tag="Square"
                                   SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
-
-                        <TextBlock x:Name="LblTriangle" Grid.Row="7" Grid.Column="0" FontFamily="Consolas" Text="△"/>
-                        <ComboBox Grid.Row="7" Grid.Column="1" x:Name="MapTriangleCombo" Tag="Triangle"
+                        <TextBlock x:Name="LblTriangle" Grid.Row="5" Grid.Column="3" FontFamily="Consolas" Text="△"/>
+                        <ComboBox Grid.Row="5" Grid.Column="4" x:Name="MapTriangleCombo" Tag="Triangle"
                                   SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
-
-                        <TextBlock Grid.Row="8" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.DPad}"/>
-                        <TextBlock Grid.Row="8" Grid.Column="1" Text="{DynamicResource Mapping.ArrowKeys}"/>
-
-                        <TextBlock x:Name="LblL3R3" Grid.Row="9" Grid.Column="0" FontFamily="Consolas" Text="L3 + R3"/>
-                        <TextBlock Grid.Row="9" Grid.Column="1" Text="{DynamicResource Mapping.ToggleApp}"/>
-
-                        <TextBlock x:Name="LblL1R1" Grid.Row="10" Grid.Column="0" FontFamily="Consolas" Text="L1 + R1"/>
-                        <TextBlock Grid.Row="10" Grid.Column="1" Text="{DynamicResource Mapping.OnScreenKeyboard}"/>
                     </Grid>
                 </StackPanel>
 

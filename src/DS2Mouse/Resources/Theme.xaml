@@ -7,7 +7,7 @@
          App.xaml.cs swaps them on KindChanged. Defaults below are the
          "no controller connected" fallback (neutral dark). -->
 
-    <SolidColorBrush x:Key="WindowBackground" Color="#1F1F1F"/>
+    <SolidColorBrush x:Key="WindowBackground" Color="#0274C9"/>
     <SolidColorBrush x:Key="AccentBrush"      Color="#FF4FC3F7"/>
 
     <!-- Controls float as semi-transparent white "panels" over the
@@ -30,15 +30,10 @@
          the controls underneath when expanded. Slightly darker than any of
          the controller-tinted window backgrounds, giving it a clear "card
          floating above the surface" read. -->
-    <SolidColorBrush x:Key="PopupBackground" Color="#FF1F1F1F"/>
+    <SolidColorBrush x:Key="PopupBackground" Color="#FF252525"/>
 
     <sys:Double x:Key="ControlCornerRadius">4</sys:Double>
 
-    <!-- ========== TextBlock ========== -->
-
-    <Style TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
-    </Style>
 
     <!-- ========== Separator ========== -->
 
@@ -453,7 +448,7 @@
                                Focusable="False"
                                PopupAnimation="Slide">
                             <Border x:Name="DropDownBorder"
-                                    Background="{DynamicResource PopupBackground}"
+                                    Background="{DynamicResource WindowBackground}"
                                     BorderBrush="{DynamicResource AccentBrush}"
                                     BorderThickness="1" CornerRadius="4"
                                     MinWidth="{TemplateBinding ActualWidth}"
@@ -604,5 +599,6 @@
             </Setter.Value>
         </Setter>
     </Style>
+
 
 </ResourceDictionary>

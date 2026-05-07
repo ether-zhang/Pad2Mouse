@@ -112,8 +112,8 @@ public partial class App : Application
     // indicators, etc. Both are swapped on KindChanged. None keeps the
     // previous color so the UI doesn't snap back to neutral when the user
     // briefly unplugs.
-    private static readonly Color PsBackground   = Color.FromRgb(0x1A, 0x35, 0x50);
-    private static readonly Color XboxBackground = Color.FromRgb(0x1A, 0x3A, 0x1A);
+    private static readonly Color PsBackground   = Color.FromRgb(0x02, 0x74, 0xC9);
+    private static readonly Color XboxBackground = Color.FromRgb(0x1E, 0x30, 0x1E);
     private static readonly Color PsAccent       = Color.FromRgb(0x4F, 0xC3, 0xF7);
     private static readonly Color XboxAccent     = Color.FromRgb(0x8B, 0xC3, 0x4A);
 
