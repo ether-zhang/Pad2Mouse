@@ -16,6 +16,17 @@
     <SelfContained>false</SelfContained>
   </PropertyGroup>
 
+  <!-- Strip developer-machine paths from the published binary. Without this
+       the PE RSDS debug directory bakes in absolute paths like
+       e:\DS2Mouse\src\...\Pad2Mouse.pdb, visible to anyone running `strings`
+       on the shipped exe. Embedded PDB keeps crash-dump symbols available
+       while DeterministicSourcePaths rewrites the rest to /_/. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>embedded</DebugType>
+    <DeterministicSourcePaths>true</DeterministicSourcePaths>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
     <PackageReference Include="HidSharp" Version="2.6.4" />
