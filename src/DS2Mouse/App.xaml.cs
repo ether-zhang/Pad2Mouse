@@ -61,6 +61,7 @@ public partial class App : Application
         _reader.Start();
         _mapper.Start();
         _guard.Start();
+        ShellInputSuppressor.Start();
 
         InitTray();
     }
@@ -178,6 +179,7 @@ public partial class App : Application
 
     private void ExitApp()
     {
+        ShellInputSuppressor.Stop();
         _mapper?.Stop();
         _guard?.Stop();
         _mapper?.Dispose();
@@ -190,6 +192,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         SaveConfig();
+        ShellInputSuppressor.Stop();
         _mapper?.Stop();
         _guard?.Stop();
         _mapper?.Dispose();

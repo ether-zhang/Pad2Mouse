@@ -20,6 +20,7 @@ public static class InputSimulator
                     dx = dx,
                     dy = dy,
                     dwFlags = MOUSEEVENTF_MOVE,
+                    dwExtraInfo = SyntheticTag,
                 }
             }
         };
@@ -104,6 +105,11 @@ public static class InputSimulator
         _ => (0u, 0u, 0u),
     };
 
+    // Tag on every synthetic event we send so our own low-level keyboard hook
+    // (ShellInputSuppressor) can recognize and let our keys through while
+    // swallowing keystrokes Windows injects for XAML gamepad navigation.
+    public static readonly IntPtr SyntheticTag = (IntPtr)0x50324D75;  // "P2Mu"
+
     private static INPUT MouseInput(uint flags, uint data) => new()
     {
         type = INPUT_MOUSE,
@@ -113,6 +119,7 @@ public static class InputSimulator
             {
                 dwFlags = flags,
                 mouseData = data,
+                dwExtraInfo = SyntheticTag,
             }
         }
     };
@@ -126,6 +133,7 @@ public static class InputSimulator
             {
                 wVk = vk,
                 dwFlags = flags,
+                dwExtraInfo = SyntheticTag,
             }
         }
     };
