@@ -12,6 +12,7 @@ public sealed class MapperEngine : IDisposable
     private const int TickIntervalMs = 8; // 125 Hz
 
     // Virtual-Key codes used by the default mapping.
+    private const ushort VK_BACK    = 0x08;
     private const ushort VK_TAB     = 0x09;
     private const ushort VK_RETURN  = 0x0D;
     private const ushort VK_SHIFT   = 0x10;
@@ -32,6 +33,8 @@ public sealed class MapperEngine : IDisposable
     private bool _r2Prev, _crossPrev;
     private bool _l2Prev;
     private bool _circlePrev, _squarePrev, _trianglePrev;
+    private bool _l3Prev, _r3Prev;
+    private bool _l3r3ComboActive;
     private float _scrollAccum;
     private long _lastTickStamp;
     private long _stickHoldStartMs;  // 0 = left stick is in deadzone
@@ -210,10 +213,22 @@ public sealed class MapperEngine : IDisposable
         bool circle   = (s.Buttons & DualSenseButton.Circle)   != 0;
         bool square   = (s.Buttons & DualSenseButton.Square)   != 0;
         bool triangle = (s.Buttons & DualSenseButton.Triangle) != 0;
+        bool l3       = (s.Buttons & DualSenseButton.L3)       != 0;
+        bool r3       = (s.Buttons & DualSenseButton.R3)       != 0;
+
+        // L3+R3 fires the Enabled-toggle combo, which would otherwise also
+        // trigger the per-button L3 / R3 mappings. Suppress those while the
+        // combo is engaged; stay sticky until both are released so partially
+        // lifting one stick can't manufacture a fresh rising edge.
+        if (l3 && r3) _l3r3ComboActive = true;
+        else if (!l3 && !r3) _l3r3ComboActive = false;
+
         DispatchInputEdge(m.Cross,    cross,    ref _crossPrev);
         DispatchInputEdge(m.Circle,   circle,   ref _circlePrev);
         DispatchInputEdge(m.Square,   square,   ref _squarePrev);
         DispatchInputEdge(m.Triangle, triangle, ref _trianglePrev);
+        DispatchInputEdge(m.L3,       l3 && !_l3r3ComboActive, ref _l3Prev);
+        DispatchInputEdge(m.R3,       r3 && !_l3r3ComboActive, ref _r3Prev);
 
         // D-Pad → arrow keys (not user-configurable for now).
         HoldKey(newlyPressed, released, DualSenseButton.DPadUp,    VK_UP);
@@ -228,11 +243,22 @@ public sealed class MapperEngine : IDisposable
         // not user-configurable yet — neither L1 nor R1 maps to anything else,
         // so there is no conflict with the per-button mappings.
         const DualSenseButton KeyboardCombo = DualSenseButton.L1 | DualSenseButton.R1;
-        bool comboNow  = (s.Buttons    & KeyboardCombo) == KeyboardCombo;
-        bool comboPrev = (_prevButtons & KeyboardCombo) == KeyboardCombo;
-        if (comboNow && !comboPrev)
+        bool kbNow  = (s.Buttons    & KeyboardCombo) == KeyboardCombo;
+        bool kbPrev = (_prevButtons & KeyboardCombo) == KeyboardCombo;
+        if (kbNow && !kbPrev)
         {
             OnSystemKeyboardToggle();
+        }
+
+        // Share+Options (the two small buttons either side of the touchpad)
+        // → snap the cursor to the center of the primary display. Useful when
+        // the cursor has drifted off-screen on a multi-monitor setup.
+        const DualSenseButton CenterCombo = DualSenseButton.Share | DualSenseButton.Options;
+        bool centerNow  = (s.Buttons    & CenterCombo) == CenterCombo;
+        bool centerPrev = (_prevButtons & CenterCombo) == CenterCombo;
+        if (centerNow && !centerPrev)
+        {
+            InputSimulator.CenterCursorOnPrimary();
         }
     }
 
@@ -272,6 +298,7 @@ public sealed class MapperEngine : IDisposable
             case ButtonActions.Escape:      InputSimulator.KeyTap(VK_ESCAPE);              break;
             case ButtonActions.Space:       InputSimulator.KeyTap(VK_SPACE);               break;
             case ButtonActions.Tab:         InputSimulator.KeyTap(VK_TAB);                 break;
+            case ButtonActions.Backspace:   InputSimulator.KeyTap(VK_BACK);                break;
             case ButtonActions.Ctrl:        InputSimulator.KeyDown(VK_CONTROL);            break;
             case ButtonActions.Shift:       InputSimulator.KeyDown(VK_SHIFT);              break;
             case ButtonActions.Alt:         InputSimulator.KeyDown(VK_MENU);               break;
@@ -314,7 +341,9 @@ public sealed class MapperEngine : IDisposable
         if (_circlePrev)   ApplyUp(m.Circle);
         if (_squarePrev)   ApplyUp(m.Square);
         if (_trianglePrev) ApplyUp(m.Triangle);
-        _r2Prev = _crossPrev = _l2Prev = _circlePrev = _squarePrev = _trianglePrev = false;
+        if (_l3Prev)       ApplyUp(m.L3);
+        if (_r3Prev)       ApplyUp(m.R3);
+        _r2Prev = _crossPrev = _l2Prev = _circlePrev = _squarePrev = _trianglePrev = _l3Prev = _r3Prev = false;
 
         // Release D-Pad-mapped arrows
         if ((_prevButtons & DualSenseButton.DPadUp)    != 0) InputSimulator.KeyUp(VK_UP);

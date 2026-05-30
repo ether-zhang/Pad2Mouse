@@ -89,12 +89,13 @@
                             <ColumnDefinition Width="80"/>   <!-- label 1 -->
                             <ColumnDefinition Width="*"/>    <!-- value 1 -->
                             <ColumnDefinition Width="16"/>   <!-- gap -->
-                            <ColumnDefinition Width="80"/>   <!-- label 2 -->
+                            <ColumnDefinition Width="110"/>  <!-- label 2 (wider for "Create + Options" / "View + Menu") -->
                             <ColumnDefinition Width="*"/>    <!-- value 2 -->
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition/><RowDefinition/><RowDefinition/>
                             <RowDefinition/><RowDefinition/><RowDefinition/>
+                            <RowDefinition/>
                         </Grid.RowDefinitions>
 
                         <!-- Rows 0-2: fixed (non-configurable) mappings -->
@@ -109,7 +110,9 @@
                         <TextBlock Grid.Row="1" Grid.Column="4" Text="{DynamicResource Mapping.ToggleApp}"/>
 
                         <TextBlock x:Name="LblL1R1" Grid.Row="2" Grid.Column="0" FontFamily="Consolas" Text="L1 + R1"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" Text="{DynamicResource Mapping.OnScreenKeyboard}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{DynamicResource Mapping.OnScreenKeyboard}"/>
+                        <TextBlock x:Name="LblShareOpt" Grid.Row="2" Grid.Column="3" FontFamily="Consolas" FontSize="11" VerticalAlignment="Center" Text="Create + Options"/>
+                        <TextBlock Grid.Row="2" Grid.Column="4" Text="{DynamicResource Mapping.CenterCursor}"/>
 
                         <!-- Rows 3-5: configurable button mappings (L2 left, R2 right) -->
                         <TextBlock x:Name="LblL2" Grid.Row="3" Grid.Column="0" FontFamily="Consolas" Text="L2"/>
@@ -133,6 +136,14 @@
                                   SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
                         <TextBlock x:Name="LblTriangle" Grid.Row="5" Grid.Column="3" FontFamily="Consolas" Text="△"/>
                         <ComboBox Grid.Row="5" Grid.Column="4" x:Name="MapTriangleCombo" Tag="Triangle"
+                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
+
+                        <!-- Row 6: L3 | R3 (individual stick-click mappings; L3+R3 combo still toggles mapping) -->
+                        <TextBlock x:Name="LblL3" Grid.Row="6" Grid.Column="0" FontFamily="Consolas" Text="L3"/>
+                        <ComboBox Grid.Row="6" Grid.Column="1" x:Name="MapL3Combo" Tag="L3"
+                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
+                        <TextBlock x:Name="LblR3" Grid.Row="6" Grid.Column="3" FontFamily="Consolas" Text="R3"/>
+                        <ComboBox Grid.Row="6" Grid.Column="4" x:Name="MapR3Combo" Tag="R3"
                                   SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
                     </Grid>
                 </StackPanel>

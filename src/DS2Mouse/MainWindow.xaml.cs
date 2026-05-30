@@ -98,8 +98,11 @@ public partial class MainWindow : Window
         LblCircle.Text   = LabelFor("○",       "B",         ds, xbox);
         LblSquare.Text   = LabelFor("□",       "X",         ds, xbox);
         LblTriangle.Text = LabelFor("△",       "Y",         ds, xbox);
+        LblL3.Text       = LabelFor("L3",      "LSB",       ds, xbox);
+        LblR3.Text       = LabelFor("R3",      "RSB",       ds, xbox);
         LblL3R3.Text     = LabelFor("L3 + R3", "LSB + RSB", ds, xbox);
         LblL1R1.Text     = LabelFor("L1 + R1", "LB + RB",   ds, xbox);
+        LblShareOpt.Text = LabelFor("Create + Options", "View + Menu", ds, xbox);
     }
 
     private static string LabelFor(string ps, string xbox, bool dsConnected, bool xboxConnected)
@@ -306,6 +309,8 @@ public partial class MainWindow : Window
         yield return MapCircleCombo;
         yield return MapSquareCombo;
         yield return MapTriangleCombo;
+        yield return MapL3Combo;
+        yield return MapR3Combo;
     }
 
     private string ReadMapping(string slot) => slot switch
@@ -316,6 +321,8 @@ public partial class MainWindow : Window
         "Circle"   => _config.Mappings.Circle,
         "Square"   => _config.Mappings.Square,
         "Triangle" => _config.Mappings.Triangle,
+        "L3"       => _config.Mappings.L3,
+        "R3"       => _config.Mappings.R3,
         _ => ButtonActions.None,
     };
 
@@ -329,6 +336,8 @@ public partial class MainWindow : Window
             case "Circle":   _config.Mappings.Circle   = action; break;
             case "Square":   _config.Mappings.Square   = action; break;
             case "Triangle": _config.Mappings.Triangle = action; break;
+            case "L3":       _config.Mappings.L3       = action; break;
+            case "R3":       _config.Mappings.R3       = action; break;
         }
     }
 

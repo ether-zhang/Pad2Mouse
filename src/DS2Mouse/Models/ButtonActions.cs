@@ -20,6 +20,7 @@ public static class ButtonActions
     public const string Escape      = "Escape";
     public const string Space       = "Space";
     public const string Tab         = "Tab";
+    public const string Backspace   = "Backspace";
     public const string Ctrl        = "Ctrl";
     public const string Shift       = "Shift";
     public const string Alt         = "Alt";
@@ -30,7 +31,7 @@ public static class ButtonActions
     {
         None, LeftClick, RightClick, MiddleClick,
         LeftHold, RightHold, MiddleHold,
-        Enter, Escape, Space, Tab,
+        Enter, Escape, Space, Tab, Backspace,
         Ctrl, Shift, Alt,
     };
 
@@ -56,8 +57,10 @@ public sealed class ButtonMappings
 {
     public string R2       { get; set; } = ButtonActions.LeftHold;
     public string Cross    { get; set; } = ButtonActions.LeftHold;
-    public string L2       { get; set; } = ButtonActions.RightHold;
+    public string L2       { get; set; } = ButtonActions.Ctrl;
     public string Circle   { get; set; } = ButtonActions.RightClick;
     public string Square   { get; set; } = ButtonActions.MiddleClick;
     public string Triangle { get; set; } = ButtonActions.Enter;
+    public string L3       { get; set; } = ButtonActions.Tab;
+    public string R3       { get; set; } = ButtonActions.MiddleClick;
 }

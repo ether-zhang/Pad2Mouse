@@ -26,6 +26,14 @@ public static class InputSimulator
         Send(input);
     }
 
+    /// <summary>Snap the cursor to the center of the primary display.
+    /// Uses SetCursorPos directly so the jump is instantaneous and bypasses
+    /// pointer ballistics — a discrete teleport, not a movement event.</summary>
+    public static void CenterCursorOnPrimary()
+    {
+        SetCursorPos(GetSystemMetrics(SM_CXSCREEN) / 2, GetSystemMetrics(SM_CYSCREEN) / 2);
+    }
+
     public static void MouseDown(MouseButton btn)
     {
         var (down, _, data) = ButtonFlags(btn);
@@ -206,4 +214,13 @@ public static class InputSimulator
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern unsafe uint SendInput(uint nInputs, INPUT* pInputs, int cbSize);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetCursorPos(int x, int y);
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int nIndex);
+
+    private const int SM_CXSCREEN = 0;
+    private const int SM_CYSCREEN = 1;
 }

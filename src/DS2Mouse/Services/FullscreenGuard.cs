@@ -103,7 +103,17 @@ public sealed class FullscreenGuard : IDisposable
 
     private static bool IsHwndCoveringMonitor(IntPtr hwnd)
     {
-        if (!GetWindowRect(hwnd, out var win)) return false;
+        // GetWindowRect on Win10+ includes the invisible resize/shadow border,
+        // so a borderless-fullscreen game at native resolution often reports
+        // e.g. (-7, 0, 3847, 2167) on a 3840x2160 display and exact-match
+        // comparison fails. DWM extended frame bounds returns the rect the
+        // user actually sees, which lines up with the monitor.
+        RECT win;
+        if (DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS,
+                out win, Marshal.SizeOf<RECT>()) != 0)
+        {
+            if (!GetWindowRect(hwnd, out win)) return false;
+        }
 
         var hMon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
         if (hMon == IntPtr.Zero) return false;
@@ -112,14 +122,16 @@ public sealed class FullscreenGuard : IDisposable
         if (!GetMonitorInfo(hMon, ref mi)) return false;
 
         var mon = mi.rcMonitor;
-        // Exact match catches both D3D exclusive (window rect == monitor) and
-        // borderless fullscreen. Maximized windows have rect == work area
-        // (taskbar excluded), so they don't match unless the taskbar is
-        // auto-hidden — which is borderline-fullscreen anyway.
-        return win.Left == mon.Left
-            && win.Top == mon.Top
-            && win.Right == mon.Right
-            && win.Bottom == mon.Bottom;
+        // "Covers monitor" (>= on all four sides) instead of exact equality.
+        // Catches D3D exclusive, borderless fullscreen, and games whose
+        // window slightly overshoots the monitor on one or more edges.
+        // Maximized normal windows still don't match because work-area
+        // bounds stop at the taskbar; if the taskbar is auto-hidden the
+        // experience is fullscreen-equivalent, which is fine to suppress.
+        return win.Left   <= mon.Left
+            && win.Top    <= mon.Top
+            && win.Right  >= mon.Right
+            && win.Bottom >= mon.Bottom;
     }
 
     private static bool QuerySystemFullscreenHint()
@@ -165,6 +177,7 @@ public sealed class FullscreenGuard : IDisposable
     // ----- Win32 -----
 
     private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+    private const uint DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
     private enum QueryUserNotificationState
     {
@@ -200,4 +213,7 @@ public sealed class FullscreenGuard : IDisposable
 
     [DllImport("shell32.dll", PreserveSig = true)]
     private static extern int SHQueryUserNotificationState(out QueryUserNotificationState state);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out RECT pvAttribute, int cbAttribute);
 }
