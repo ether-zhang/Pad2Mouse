@@ -17,7 +17,7 @@
 - **全屏自动让路**：检测到任意前台窗口铺满整个显示器（独占全屏 / 无边框全屏 / D3D / 演示模式都涵盖）即停用映射；通过进程名白名单允许例外。最大化窗口、空桌面不算全屏。
 - **系统托盘**：右键菜单可启停 / 显示窗口 / 退出；双击托盘打开窗口。启停切换时弹 Windows 通知。
 - **多语言**：中文 / English，运行时即时切换，托盘菜单跟随。
-- **配置持久化**：所有设置保存到与可执行文件同目录的 `config.json`，每次改动即时落盘。
+- **配置持久化**：所有设置保存到 `%LOCALAPPDATA%\Pad2Mouse\config.json`，每次改动即时落盘。旧版（写在 exe 同目录）的配置首次启动会自动迁移。
 
 ## 系统要求
 
@@ -56,7 +56,7 @@ dotnet publish src/DS2Mouse/DS2Mouse.csproj `
   -p:PublishSingleFile=true
 ```
 
-`publish/Pad2Mouse.exe` 拷贝到目标机器双击即可运行；`config.json` 自动出现在同目录。
+`publish/Pad2Mouse.exe` 拷贝到目标机器双击即可运行；`config.json` 会写入 `%LOCALAPPDATA%\Pad2Mouse\`。
 
 ## 配置文件示例 (`config.json`)
 

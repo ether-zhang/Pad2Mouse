@@ -15,7 +15,35 @@ public sealed class ConfigStore
 
     public ConfigStore(string? path = null)
     {
-        FilePath = path ?? Path.Combine(AppContext.BaseDirectory, "config.json");
+        FilePath = path ?? DefaultPath();
+        MigrateLegacyLocation();
+    }
+
+    /// <summary>%LOCALAPPDATA%\Pad2Mouse\config.json. Picked because the exe's
+    /// install location may be read-only (Steam ships under Program Files;
+    /// Save would silently swallow the access-denied otherwise).</summary>
+    private static string DefaultPath() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Pad2Mouse",
+            "config.json");
+
+    /// <summary>Earlier builds wrote next to the exe. If the new location is
+    /// empty but a legacy file exists, move it once so the user's settings
+    /// carry over. Best-effort: any failure leaves the legacy file in place
+    /// and Load falls back to defaults.</summary>
+    private void MigrateLegacyLocation()
+    {
+        try
+        {
+            if (File.Exists(FilePath)) return;
+            var legacy = Path.Combine(AppContext.BaseDirectory, "config.json");
+            if (!File.Exists(legacy)) return;
+            var dir = Path.GetDirectoryName(FilePath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            File.Move(legacy, FilePath);
+        }
+        catch { /* migration is best-effort */ }
     }
 
     public AppConfig Load()
