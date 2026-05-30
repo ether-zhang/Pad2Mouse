@@ -114,9 +114,9 @@ public partial class App : Application
     // previous color so the UI doesn't snap back to neutral when the user
     // briefly unplugs.
     private static readonly Color PsBackground   = Color.FromRgb(0x02, 0x74, 0xC9);
-    private static readonly Color XboxBackground = Color.FromRgb(0x1E, 0x30, 0x1E);
+    private static readonly Color XboxBackground = Color.FromRgb(0x10, 0x7C, 0x10);
     private static readonly Color PsAccent       = Color.FromRgb(0x4F, 0xC3, 0xF7);
-    private static readonly Color XboxAccent     = Color.FromRgb(0x8B, 0xC3, 0x4A);
+    private static readonly Color XboxAccent     = Color.FromRgb(0x5A, 0x99, 0x72);
 
     private void OnControllerKindChanged(ControllerKind kind) =>
         Dispatcher.BeginInvoke(() => UpdateAccentBrush(kind));

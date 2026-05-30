@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using DS2Mouse.Models;
 using DS2Mouse.Services;
 
@@ -21,6 +22,12 @@ public partial class MainWindow : Window
     private bool _initialized;
     private bool _populatingCombos;
 
+    // When both PlayStation and Xbox controllers are attached, the multi-button
+    // combo labels would otherwise read "L3 + R3 / LSB + RSB" — too long for the
+    // layout. Alternate between the two styles every 2 s instead.
+    private readonly DispatcherTimer _comboCycleTimer;
+    private bool _comboShowsXbox;
+
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, uint attr, ref uint value, uint size);
 
@@ -35,6 +42,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        _comboCycleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _comboCycleTimer.Tick += OnComboCycleTick;
 
         _reader = App.Current.Reader;
         _mapper = App.Current.Mapper;
@@ -100,9 +110,44 @@ public partial class MainWindow : Window
         LblTriangle.Text = LabelFor("△",       "Y",         ds, xbox);
         LblL3.Text       = LabelFor("L3",      "LSB",       ds, xbox);
         LblR3.Text       = LabelFor("R3",      "RSB",       ds, xbox);
-        LblL3R3.Text     = LabelFor("L3 + R3", "LSB + RSB", ds, xbox);
-        LblL1R1.Text     = LabelFor("L1 + R1", "LB + RB",   ds, xbox);
-        LblShareOpt.Text = LabelFor("Create + Options", "View + Menu", ds, xbox);
+
+        if (ds && xbox)
+        {
+            // Multi-button combos are too long when concatenated ("L3 + R3 /
+            // LSB + RSB"). Cycle between the two styles instead.
+            _comboCycleTimer.Start();
+            ApplyComboLabels();
+        }
+        else
+        {
+            _comboCycleTimer.Stop();
+            _comboShowsXbox = false;
+            LblL3R3.Text     = LabelFor("L3 + R3", "LSB + RSB", ds, xbox);
+            LblL1R1.Text     = LabelFor("L1 + R1", "LB + RB",   ds, xbox);
+            LblShareOpt.Text = LabelFor("Create + Options", "View + Menu", ds, xbox);
+        }
+    }
+
+    private void OnComboCycleTick(object? sender, EventArgs e)
+    {
+        _comboShowsXbox = !_comboShowsXbox;
+        ApplyComboLabels();
+    }
+
+    private void ApplyComboLabels()
+    {
+        if (_comboShowsXbox)
+        {
+            LblL3R3.Text     = "LSB + RSB";
+            LblL1R1.Text     = "LB + RB";
+            LblShareOpt.Text = "View + Menu";
+        }
+        else
+        {
+            LblL3R3.Text     = "L3 + R3";
+            LblL1R1.Text     = "L1 + R1";
+            LblShareOpt.Text = "Create + Options";
+        }
     }
 
     private static string LabelFor(string ps, string xbox, bool dsConnected, bool xboxConnected)
