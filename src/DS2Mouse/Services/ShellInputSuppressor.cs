@@ -50,16 +50,38 @@ public static class ShellInputSuppressor
         if (nCode == HC_ACTION && Enabled)
         {
             var kb = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
-            // Drop only OS-injected keys that aren't ours. Real keystrokes
-            // (LLKHF_INJECTED clear) and our own SendInput keys (tagged) flow
-            // through untouched.
-            if ((kb.flags & LLKHF_INJECTED) != 0 && kb.dwExtraInfo != InputSimulator.SyntheticTag)
+            // Only swallow the specific virtual keys Win11 uses to translate
+            // gamepad input (D-pad / face buttons / sticks) into focus
+            // navigation, and only when injected by something other than us.
+            // This leaves browser-back/forward, media keys, IME keys, and any
+            // other third-party SendInput traffic (Logitech / Razer / AHK)
+            // untouched.
+            if ((kb.flags & LLKHF_INJECTED) != 0
+                && kb.dwExtraInfo != InputSimulator.SyntheticTag
+                && IsNavigationKey(kb.vkCode))
             {
                 return (IntPtr)1;
             }
         }
         return CallNextHookEx(_hook, nCode, wParam, lParam);
     }
+
+    private static bool IsNavigationKey(uint vk) => vk switch
+    {
+        0x09 => true, // VK_TAB
+        0x0D => true, // VK_RETURN
+        0x1B => true, // VK_ESCAPE
+        0x20 => true, // VK_SPACE
+        0x21 => true, // VK_PRIOR (Page Up)
+        0x22 => true, // VK_NEXT (Page Down)
+        0x23 => true, // VK_END
+        0x24 => true, // VK_HOME
+        0x25 => true, // VK_LEFT
+        0x26 => true, // VK_UP
+        0x27 => true, // VK_RIGHT
+        0x28 => true, // VK_DOWN
+        _    => false,
+    };
 
     // ----- P/Invoke -----
 
