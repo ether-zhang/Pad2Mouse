@@ -36,27 +36,36 @@
 ## 构建与运行
 
 ```powershell
-# 构建（Debug）
+# Debug 构建（IDE 调试用）
 dotnet build src/DS2Mouse/DS2Mouse.csproj
 
 # 直接运行
 dotnet run --project src/DS2Mouse/DS2Mouse.csproj
 
-# 发布：自包含单文件（推荐，约 72 MB）
+# 发布：自包含单文件 EXE（目标机器零依赖，~170 MB）
+# Release 配置在 csproj 里已开启 PublishSingleFile / 内嵌 PDB / DeterministicSourcePaths，
+# 命令行只需补 runtime + self-contained + 原生库内嵌。
 dotnet publish src/DS2Mouse/DS2Mouse.csproj `
-  -c Release -r win-x64 --self-contained true -o publish `
-  -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true `
-  -p:EnableCompressionInSingleFile=true `
-  -p:DebugType=None -p:DebugSymbols=false
-
-# 发布：依赖系统装好的 .NET 9 Desktop Runtime（约 5 MB）
-dotnet publish src/DS2Mouse/DS2Mouse.csproj `
-  -c Release -r win-x64 --self-contained false -o publish `
-  -p:PublishSingleFile=true
+  -c Release -r win-x64 `
+  --self-contained true `
+  -p:IncludeNativeLibrariesForSelfExtract=true
 ```
 
-`publish/Pad2Mouse.exe` 拷贝到目标机器双击即可运行；`config.json` 会写入 `%LOCALAPPDATA%\Pad2Mouse\`。
+产物：`src/DS2Mouse/bin/Release/net9.0-windows/win-x64/publish/Pad2Mouse.exe`。拷到目标机器双击即用；`config.json` 自动写入 `%LOCALAPPDATA%\Pad2Mouse\`。
+
+### Steam 上传
+
+把上面产出的 `Pad2Mouse.exe` 拷到 Steamworks SDK 的 `sdk\tools\ContentBuilder\content\`，VDF 脚本在 `sdk\tools\ContentBuilder\scripts\app_build_4798270.vdf`（脚本里 `SetLive ""` 表示上传后不会自动发布到任何分支，需要去后台手动 Set Build Live）：
+
+```powershell
+cd <SDK>\sdk\tools\ContentBuilder
+.\builder\steamcmd.exe `
+  +login <你的Steamworks账号> `
+  +run_app_build "scripts\app_build_4798270.vdf" `
+  +quit
+```
+
+首次会要密码 + Steam Guard 2FA，token 缓存约 30 天。
 
 ## 配置文件示例 (`config.json`)
 

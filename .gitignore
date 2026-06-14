@@ -45,3 +45,5 @@ Desktop.ini
 *.tmp
 *.bak
 ~$*
+steam*
+*png
