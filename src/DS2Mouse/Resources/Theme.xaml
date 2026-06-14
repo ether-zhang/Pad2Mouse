@@ -151,6 +151,9 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Mark" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="Mark" Property="Stroke" Value="{DynamicResource ForegroundBrush}"/>
+                            <Setter TargetName="Box" Property="Background"  Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
