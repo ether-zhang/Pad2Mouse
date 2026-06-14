@@ -21,7 +21,7 @@ public sealed class ScrollConfig
 public sealed class AppConfig
 {
     public bool Enabled { get; set; } = true;
-    public string Language { get; set; } = "zh-CN";
+    public string Language { get; set; } = "en";
     public bool EnableNotifications { get; set; } = true;
     public StickConfig LeftStick { get; set; } = new();
     public ScrollConfig RightStick { get; set; } = new();

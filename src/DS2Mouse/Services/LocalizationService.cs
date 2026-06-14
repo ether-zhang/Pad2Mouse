@@ -10,7 +10,7 @@ public sealed class LocalizationService
     private readonly Application _app;
     private ResourceDictionary? _current;
 
-    public string CurrentLanguage { get; private set; } = Chinese;
+    public string CurrentLanguage { get; private set; } = English;
     public event Action? LanguageChanged;
 
     public LocalizationService(Application app) { _app = app; }
