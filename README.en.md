@@ -6,6 +6,16 @@ Use a PlayStation DualSense or Xbox controller as a mouse and keyboard on Window
 
 Great for browsing from the couch, watching videos, driving an HTPC, or operating Windows when a mouse and keyboard aren't within reach.
 
+## Out of the box (OOTB)
+
+1. Download the latest `Pad2Mouse.exe` from [Releases](https://github.com/ether-zhang/Pad2Mouse/releases).
+2. Double-click to run — **no installation**, no .NET runtime, no Visual C++ redistributable, no drivers, and no administrator rights required.
+3. It lives in the system tray; plug in a DualSense or Xbox controller and the left stick drives the mouse.
+
+> The released EXE is a self-contained single file. On first launch it extracts the runtime under `%LOCALAPPDATA%\Microsoft\.NET`, so the very first start takes 1–2 seconds; subsequent launches are instant.
+>
+> Because the binary isn't code-signed, Windows SmartScreen may show "Windows protected your PC" on first run — click **More info → Run anyway**.
+
 ## Features
 
 ### Pointer & scrolling

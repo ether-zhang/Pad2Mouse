@@ -6,6 +6,16 @@
 
 适合在沙发上浏览网页、看视频、操作 HTPC，或在手边没有鼠标键盘时控制 Windows 桌面。
 
+## 开箱即用（OOTB）
+
+1. 到 [Releases](https://github.com/ether-zhang/Pad2Mouse/releases) 下载最新的 `Pad2Mouse.exe`。
+2. 双击运行 —— **无需安装**，不依赖 .NET 运行时、Visual C++ 运行库或任何驱动，也不需要管理员权限。
+3. 程序常驻系统托盘；接上 DualSense 或 Xbox 手柄即可用左摇杆控制鼠标。
+
+> 发布的 EXE 是自包含单文件，首次启动会在 `%LOCALAPPDATA%\Microsoft\.NET` 下解压运行时，略有 1~2 秒延迟，之后启动即时。
+>
+> 由于未做代码签名，首次运行可能弹出 Windows SmartScreen 提示「Windows 已保护你的电脑」——点击 **更多信息 → 仍要运行** 即可。
+
 ## 功能
 
 ### 指针与滚动
