@@ -53,6 +53,6 @@ steamworks_sdk_*.zip
 *.png
 
 # Personal Claude Code settings (per-machine)
-.claude/settings.local.json
+.claude/
 
 TODO.md
