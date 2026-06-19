@@ -45,5 +45,14 @@ Desktop.ini
 *.tmp
 *.bak
 ~$*
-steam*
-*png
+
+# Steam build artifacts (SDK, scratch store-page text, generated marketing assets)
+steam/
+steamworks_sdk_*/
+steamworks_sdk_*.zip
+*.png
+
+# Personal Claude Code settings (per-machine)
+.claude/settings.local.json
+
+TODO.md
