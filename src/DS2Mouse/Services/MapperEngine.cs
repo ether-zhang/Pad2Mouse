@@ -88,6 +88,11 @@ public sealed class MapperEngine : IDisposable
         if (snapshot is null) return;
         var s = snapshot.Value;
 
+        // Tell the shell-nav suppressor the pad is in use so it only drops
+        // Win11's injected nav keys while we're actually driving it — not the
+        // keys a remote-desktop / streaming host injects when the pad is idle.
+        if (IsControllerActive(s)) ShellInputSuppressor.NotifyGamepadActivity();
+
         // L3+R3 (both sticks clicked together) toggles Enabled regardless of
         // gating, so the user can re-enable from the controller. The PS button
         // is avoided because Steam / Game Bar / system shells intercept it.
@@ -121,6 +126,18 @@ public sealed class MapperEngine : IDisposable
 
         _prevButtons = s.Buttons;
         _lastTickStamp = Environment.TickCount64;
+    }
+
+    // Genuine controller activity: any button down, or a stick pushed well
+    // past drift. The threshold sits above resting noise but below Win11's
+    // stick-as-nav trigger, so the suppression window is already open by the
+    // time Win11 injects an arrow from stick deflection.
+    private static bool IsControllerActive(in DualSenseState s)
+    {
+        const float Thr = 0.3f;
+        return s.Buttons != DualSenseButton.None
+            || MathF.Abs(s.LeftStickX)  > Thr || MathF.Abs(s.LeftStickY)  > Thr
+            || MathF.Abs(s.RightStickX) > Thr || MathF.Abs(s.RightStickY) > Thr;
     }
 
     private void ProcessLeftStick(DualSenseState s)

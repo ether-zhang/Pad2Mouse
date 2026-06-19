@@ -17,6 +17,16 @@ namespace DS2Mouse.Services;
 /// LLKHF_INJECTED, so we mark every SendInput call with
 /// <see cref="InputSimulator.SyntheticTag"/> in dwExtraInfo and let those
 /// through.
+///
+/// The injected flag alone can't tell a Win11 gamepad-nav key from a key
+/// injected by remote-desktop / game-streaming hosts (Sunshine, Parsec, RDP)
+/// or automation tools — they all use SendInput too. Dropping their nav keys
+/// would make a streamed keyboard's arrows / Tab / Enter / Esc stop working
+/// on the host. The distinguishing fact is that Win11's nav keys are always a
+/// consequence of gamepad input we also observe, so we only suppress within a
+/// short window after the controller last had genuine activity
+/// (<see cref="NotifyGamepadActivity"/>). With no gamepad in use the window
+/// stays closed and every injected key passes through.
 /// </summary>
 public static class ShellInputSuppressor
 {
@@ -24,10 +34,25 @@ public static class ShellInputSuppressor
     private const int  HC_ACTION       = 0;
     private const uint LLKHF_INJECTED  = 0x00000010;
 
+    // How long after the last gamepad activity we still treat an injected
+    // nav key as Win11's doing. Generous enough to bridge the mapper's tick
+    // jitter and the key-up that lands just after the stick/button releases,
+    // short enough that a streamed keyboard isn't blocked once the local pad
+    // goes idle.
+    private const long SuppressWindowMs = 200;
+
     private static IntPtr _hook;
     private static LowLevelKeyboardProc? _proc;  // GC pin
+    // "Long ago" so the window starts closed. Not long.MinValue — that would
+    // overflow when subtracted from TickCount64 and wrap the window open.
+    private static long _lastGamepadActivityMs = -60_000;
 
     public static bool Enabled { get; private set; }
+
+    /// <summary>Stamp that the controller is currently being used, opening the
+    /// suppression window. Called from the mapper tick on genuine input.</summary>
+    public static void NotifyGamepadActivity() =>
+        Volatile.Write(ref _lastGamepadActivityMs, Environment.TickCount64);
 
     public static void Start()
     {
@@ -52,12 +77,16 @@ public static class ShellInputSuppressor
             var kb = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
             // Only swallow the specific virtual keys Win11 uses to translate
             // gamepad input (D-pad / face buttons / sticks) into focus
-            // navigation, and only when injected by something other than us.
-            // This leaves browser-back/forward, media keys, IME keys, and any
-            // other third-party SendInput traffic (Logitech / Razer / AHK)
-            // untouched.
+            // navigation, and only when injected by something other than us,
+            // and only while the controller is actually being used. The last
+            // gate is what lets a streamed keyboard (Sunshine / Parsec / RDP)
+            // or automation tools keep their arrows / Tab / Enter / Esc — those
+            // arrive with no gamepad activity, so the window is closed. It also
+            // leaves browser-back/forward, media keys, and IME keys untouched.
+            long sinceActivity = Environment.TickCount64 - Volatile.Read(ref _lastGamepadActivityMs);
             if ((kb.flags & LLKHF_INJECTED) != 0
                 && kb.dwExtraInfo != InputSimulator.SyntheticTag
+                && sinceActivity <= SuppressWindowMs
                 && IsNavigationKey(kb.vkCode))
             {
                 return (IntPtr)1;
