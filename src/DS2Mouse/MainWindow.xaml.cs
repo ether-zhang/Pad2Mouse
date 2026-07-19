@@ -2,9 +2,9 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Threading;
 using DS2Mouse.Models;
 using DS2Mouse.Services;
 
@@ -21,12 +21,22 @@ public partial class MainWindow : Window
     private readonly LocalizationService _loc;
     private bool _initialized;
     private bool _populatingCombos;
+    private bool _updatingSensitivityUi;
+    private bool _showXboxController;
+    private string _selectedMappingSlot = "Cross";
 
-    // When both PlayStation and Xbox controllers are attached, the multi-button
-    // combo labels would otherwise read "L3 + R3 / LSB + RSB" — too long for the
-    // layout. Alternate between the two styles every 2 s instead.
-    private readonly DispatcherTimer _comboCycleTimer;
-    private bool _comboShowsXbox;
+    private readonly record struct SensitivityPreset(
+        float Sensitivity,
+        float Deadzone,
+        float AccelMax,
+        float AccelRamp,
+        float ScrollSpeed,
+        float ScrollAccelMax,
+        float ScrollAccelRamp);
+
+    private static readonly SensitivityPreset PrecisePreset = new(8f, 0.12f, 1.8f, 1.2f, 6f, 1.8f, 1.2f);
+    private static readonly SensitivityPreset BalancedPreset = new(12f, 0.10f, 2.5f, 1.0f, 8f, 2.5f, 1.0f);
+    private static readonly SensitivityPreset FastPreset = new(18f, 0.08f, 3.5f, 0.7f, 12f, 3.5f, 0.7f);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, uint attr, ref uint value, uint size);
@@ -42,9 +52,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-
-        _comboCycleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        _comboCycleTimer.Tick += OnComboCycleTick;
 
         _reader = App.Current.Reader;
         _mapper = App.Current.Mapper;
@@ -71,10 +78,12 @@ public partial class MainWindow : Window
         NotifyCheck.IsChecked = _config.EnableNotifications;
         AutoStartCheck.IsChecked = StartupRegistration.IsRegistered();
         SelectLanguageInCombo(_loc.CurrentLanguage);
-        PopulateMappingCombos();
+        PopulateMappingCombo();
         RefreshWhitelistBox();
         SetConnectionLabel(_reader.ConnectionType);
-        SetMappingLabels(_reader.Kind);
+        SelectControllerForKind(_reader.Kind);
+        SelectMappingSlot(_selectedMappingSlot, openDropDown: false);
+        RefreshSensitivityPresetState();
         UpdateGuardStatus();
         _initialized = true;
 
@@ -87,74 +96,36 @@ public partial class MainWindow : Window
 
     private void OnControllerKindChanged(ControllerKind kind)
     {
-        // Keep the last connected style when the user unplugs everything —
-        // snapping back to PS defaults mid-session is jarring. Mirrors the
-        // same "keep previous" behavior in App.UpdateAccentBrush.
+        // Keep the last visible controller when everything disconnects.
         if (kind == ControllerKind.None) return;
-        Dispatcher.BeginInvoke(() => SetMappingLabels(kind));
+        Dispatcher.BeginInvoke(() => SelectControllerForKind(kind));
     }
 
-    private void SetMappingLabels(ControllerKind kind)
+    private void SelectControllerForKind(ControllerKind kind)
     {
-        // Show PS-style alone when only DualSense is connected, Xbox-style alone
-        // when only Xbox, and "PS / Xbox" combined when both are present. With
-        // nothing connected we fall back to PS naming, since the rest of the
-        // app's text already uses that style.
-        bool ds   = (kind & ControllerKind.DualSense) != 0;
-        bool xbox = (kind & ControllerKind.Xbox)      != 0;
-        LblR2.Text       = LabelFor("R2",      "RT",        ds, xbox);
-        LblL2.Text       = LabelFor("L2",      "LT",        ds, xbox);
-        LblCross.Text    = LabelFor("✕",       "A",         ds, xbox);
-        LblCircle.Text   = LabelFor("○",       "B",         ds, xbox);
-        LblSquare.Text   = LabelFor("□",       "X",         ds, xbox);
-        LblTriangle.Text = LabelFor("△",       "Y",         ds, xbox);
-        LblL3.Text       = LabelFor("L3",      "LSB",       ds, xbox);
-        LblR3.Text       = LabelFor("R3",      "RSB",       ds, xbox);
-
-        if (ds && xbox)
-        {
-            // Multi-button combos are too long when concatenated ("L3 + R3 /
-            // LSB + RSB"). Cycle between the two styles instead.
-            _comboCycleTimer.Start();
-            ApplyComboLabels();
-        }
-        else
-        {
-            _comboCycleTimer.Stop();
-            _comboShowsXbox = false;
-            LblL3R3.Text     = LabelFor("L3 + R3", "LSB + RSB", ds, xbox);
-            LblL1R1.Text     = LabelFor("L1 + R1", "LB + RB",   ds, xbox);
-            LblShareOpt.Text = LabelFor("Create + Options", "View + Menu", ds, xbox);
-        }
+        if (kind == ControllerKind.Xbox) SetControllerMode(showXbox: true);
+        else if (kind == ControllerKind.DualSense) SetControllerMode(showXbox: false);
+        else SetControllerMode(_showXboxController); // both connected: preserve manual selection
     }
 
-    private void OnComboCycleTick(object? sender, EventArgs e)
+    private void OnControllerModeClick(object sender, RoutedEventArgs e)
     {
-        _comboShowsXbox = !_comboShowsXbox;
-        ApplyComboLabels();
+        if (sender is ToggleButton { Tag: string mode })
+            SetControllerMode(mode == "Xbox");
     }
 
-    private void ApplyComboLabels()
+    private void SetControllerMode(bool showXbox)
     {
-        if (_comboShowsXbox)
-        {
-            LblL3R3.Text     = "LSB + RSB";
-            LblL1R1.Text     = "LB + RB";
-            LblShareOpt.Text = "View + Menu";
-        }
-        else
-        {
-            LblL3R3.Text     = "L3 + R3";
-            LblL1R1.Text     = "L1 + R1";
-            LblShareOpt.Text = "Create + Options";
-        }
-    }
+        _showXboxController = showXbox;
+        PsViewButton.IsChecked = !showXbox;
+        XboxViewButton.IsChecked = showXbox;
+        PsControllerView.Visibility = showXbox ? Visibility.Collapsed : Visibility.Visible;
+        XboxControllerView.Visibility = showXbox ? Visibility.Visible : Visibility.Collapsed;
 
-    private static string LabelFor(string ps, string xbox, bool dsConnected, bool xboxConnected)
-    {
-        if (dsConnected && xboxConnected) return $"{ps} / {xbox}";
-        if (xboxConnected)                return xbox;
-        return ps; // DS only or nothing connected
+        FixedToggleComboLabel.Text = showXbox ? "LSB + RSB" : "L3 + R3";
+        FixedKeyboardComboLabel.Text = showXbox ? "LB + RB" : "L1 + R1";
+        FixedCenterComboLabel.Text = showXbox ? "View + Menu" : "Create + Options";
+        RefreshMappingHotspots();
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -233,9 +204,9 @@ public partial class MainWindow : Window
         // DynamicResource handles XAML labels; refresh strings we set in code.
         SetConnectionLabel(_reader.ConnectionType);
         UpdateGuardStatus();
-        // Dynamic Key items embed the localized "Key:" prefix as plain text,
-        // so rebuild the combos to pick up the new language.
-        PopulateMappingCombos();
+        // Dynamic Key items and hotspot tooltips embed localized text.
+        PopulateMappingCombo();
+        RefreshMappingHotspots();
     }
 
     private void OnEnableToggle(object sender, RoutedEventArgs e)
@@ -246,58 +217,161 @@ public partial class MainWindow : Window
 
     private void OnSensChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_initialized) return;
+        if (!_initialized || _updatingSensitivityUi) return;
         _config.LeftStick.Sensitivity = (float)e.NewValue;
         SensVal.Text = $"{e.NewValue:0}";
+        MarkSensitivityCustom();
         App.Current.SaveConfig();
     }
 
     private void OnDzChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_initialized) return;
+        if (!_initialized || _updatingSensitivityUi) return;
         _config.LeftStick.Deadzone = (float)e.NewValue;
         DzVal.Text = $"{e.NewValue:0.00}";
+        MarkSensitivityCustom();
         App.Current.SaveConfig();
     }
 
     private void OnScrollChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_initialized) return;
+        if (!_initialized || _updatingSensitivityUi) return;
         _config.RightStick.Speed = (float)e.NewValue;
         ScrollVal.Text = $"{e.NewValue:0}";
+        MarkSensitivityCustom();
         App.Current.SaveConfig();
     }
 
     private void OnAccelMaxChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_initialized) return;
+        if (!_initialized || _updatingSensitivityUi) return;
         _config.LeftStick.AccelMaxFactor = (float)e.NewValue;
         AccelMaxVal.Text = $"{e.NewValue:0.0}";
+        MarkSensitivityCustom();
         App.Current.SaveConfig();
     }
 
     private void OnAccelRampChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_initialized) return;
+        if (!_initialized || _updatingSensitivityUi) return;
         _config.LeftStick.AccelRampSeconds = (float)e.NewValue;
         AccelRampVal.Text = $"{e.NewValue:0.0}";
+        MarkSensitivityCustom();
         App.Current.SaveConfig();
     }
 
     private void OnScrollAccelMaxChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_initialized) return;
+        if (!_initialized || _updatingSensitivityUi) return;
         _config.RightStick.AccelMaxFactor = (float)e.NewValue;
         ScrollAccelMaxVal.Text = $"{e.NewValue:0.0}";
+        MarkSensitivityCustom();
         App.Current.SaveConfig();
     }
 
     private void OnScrollAccelRampChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_initialized) return;
+        if (!_initialized || _updatingSensitivityUi) return;
         _config.RightStick.AccelRampSeconds = (float)e.NewValue;
         ScrollAccelRampVal.Text = $"{e.NewValue:0.0}";
+        MarkSensitivityCustom();
         App.Current.SaveConfig();
+    }
+
+    private void OnSensitivityPresetClick(object sender, RoutedEventArgs e)
+    {
+        if (!_initialized || sender is not ToggleButton { Tag: string presetId }) return;
+
+        if (presetId == "Custom")
+        {
+            SetSensitivityPresetSelection("Custom");
+            CustomSensitivityPanel.Visibility = CustomSensitivityPanel.Visibility == Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            return;
+        }
+
+        var preset = presetId switch
+        {
+            "Precise" => PrecisePreset,
+            "Fast" => FastPreset,
+            _ => BalancedPreset,
+        };
+        ApplySensitivityPreset(presetId, preset);
+    }
+
+    private void ApplySensitivityPreset(string presetId, SensitivityPreset preset)
+    {
+        _config.LeftStick.Sensitivity = preset.Sensitivity;
+        _config.LeftStick.Deadzone = preset.Deadzone;
+        _config.LeftStick.AccelMaxFactor = preset.AccelMax;
+        _config.LeftStick.AccelRampSeconds = preset.AccelRamp;
+        _config.RightStick.Speed = preset.ScrollSpeed;
+        _config.RightStick.AccelMaxFactor = preset.ScrollAccelMax;
+        _config.RightStick.AccelRampSeconds = preset.ScrollAccelRamp;
+
+        _updatingSensitivityUi = true;
+        try
+        {
+            SyncSensitivityControls();
+        }
+        finally
+        {
+            _updatingSensitivityUi = false;
+        }
+
+        SetSensitivityPresetSelection(presetId);
+        CustomSensitivityPanel.Visibility = Visibility.Collapsed;
+        App.Current.SaveConfig();
+    }
+
+    private void SyncSensitivityControls()
+    {
+        SensSlider.Value = _config.LeftStick.Sensitivity;
+        DzSlider.Value = _config.LeftStick.Deadzone;
+        AccelMaxSlider.Value = _config.LeftStick.AccelMaxFactor;
+        AccelRampSlider.Value = _config.LeftStick.AccelRampSeconds;
+        ScrollSlider.Value = _config.RightStick.Speed;
+        ScrollAccelMaxSlider.Value = _config.RightStick.AccelMaxFactor;
+        ScrollAccelRampSlider.Value = _config.RightStick.AccelRampSeconds;
+        SensVal.Text = $"{_config.LeftStick.Sensitivity:0}";
+        DzVal.Text = $"{_config.LeftStick.Deadzone:0.00}";
+        AccelMaxVal.Text = $"{_config.LeftStick.AccelMaxFactor:0.0}";
+        AccelRampVal.Text = $"{_config.LeftStick.AccelRampSeconds:0.0}";
+        ScrollVal.Text = $"{_config.RightStick.Speed:0}";
+        ScrollAccelMaxVal.Text = $"{_config.RightStick.AccelMaxFactor:0.0}";
+        ScrollAccelRampVal.Text = $"{_config.RightStick.AccelRampSeconds:0.0}";
+    }
+
+    private void RefreshSensitivityPresetState()
+    {
+        var presetId = MatchesPreset(PrecisePreset) ? "Precise"
+            : MatchesPreset(BalancedPreset) ? "Balanced"
+            : MatchesPreset(FastPreset) ? "Fast"
+            : "Custom";
+        SetSensitivityPresetSelection(presetId);
+        CustomSensitivityPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private bool MatchesPreset(SensitivityPreset preset) =>
+        NearlyEqual(_config.LeftStick.Sensitivity, preset.Sensitivity)
+        && NearlyEqual(_config.LeftStick.Deadzone, preset.Deadzone)
+        && NearlyEqual(_config.LeftStick.AccelMaxFactor, preset.AccelMax)
+        && NearlyEqual(_config.LeftStick.AccelRampSeconds, preset.AccelRamp)
+        && NearlyEqual(_config.RightStick.Speed, preset.ScrollSpeed)
+        && NearlyEqual(_config.RightStick.AccelMaxFactor, preset.ScrollAccelMax)
+        && NearlyEqual(_config.RightStick.AccelRampSeconds, preset.ScrollAccelRamp);
+
+    private static bool NearlyEqual(float left, float right) => MathF.Abs(left - right) < 0.001f;
+
+    private void MarkSensitivityCustom() => SetSensitivityPresetSelection("Custom");
+
+    private void SetSensitivityPresetSelection(string presetId)
+    {
+        PrecisePresetButton.IsChecked = presetId == "Precise";
+        BalancedPresetButton.IsChecked = presetId == "Balanced";
+        FastPresetButton.IsChecked = presetId == "Fast";
+        CustomPresetButton.IsChecked = presetId == "Custom";
     }
 
     private void OnNotifyToggle(object sender, RoutedEventArgs e)
@@ -314,31 +388,24 @@ public partial class MainWindow : Window
         else                                  StartupRegistration.Unregister();
     }
 
-    private void PopulateMappingCombos()
+    private void PopulateMappingCombo()
     {
         _populatingCombos = true;
         try
         {
-            foreach (var combo in MappingCombos())
+            MappingActionCombo.Items.Clear();
+            foreach (var id in ButtonActions.All)
             {
-                combo.Items.Clear();
-                foreach (var id in ButtonActions.All)
-                {
-                    var item = new ComboBoxItem { Tag = id };
-                    // SetResourceReference makes the displayed label track the
-                    // current language dictionary, so it updates on language swap.
-                    item.SetResourceReference(ContentControl.ContentProperty, $"Mapping.{id}");
-                    combo.Items.Add(item);
-                }
-                // Sentinel that triggers the on-screen-keyboard pick flow.
-                var pick = new ComboBoxItem { Tag = SentinelPickKey };
-                pick.SetResourceReference(ContentControl.ContentProperty, "Mapping.PickKey");
-                combo.Items.Add(pick);
-
-                var slot = (string)combo.Tag;
-                var current = ReadMapping(slot);
-                SelectActionInCombo(combo, current);
+                var item = new ComboBoxItem { Tag = id };
+                item.SetResourceReference(ContentControl.ContentProperty, $"Mapping.{id}");
+                MappingActionCombo.Items.Add(item);
             }
+            var pick = new ComboBoxItem { Tag = SentinelPickKey };
+            pick.SetResourceReference(ContentControl.ContentProperty, "Mapping.PickKey");
+            MappingActionCombo.Items.Add(pick);
+
+            MappingActionCombo.Tag = _selectedMappingSlot;
+            SelectActionInCombo(MappingActionCombo, ReadMapping(_selectedMappingSlot));
         }
         finally
         {
@@ -346,16 +413,69 @@ public partial class MainWindow : Window
         }
     }
 
-    private IEnumerable<ComboBox> MappingCombos()
+    private void OnMappingHotspotClick(object sender, RoutedEventArgs e)
     {
-        yield return MapR2Combo;
-        yield return MapL2Combo;
-        yield return MapCrossCombo;
-        yield return MapCircleCombo;
-        yield return MapSquareCombo;
-        yield return MapTriangleCombo;
-        yield return MapL3Combo;
-        yield return MapR3Combo;
+        if (sender is ToggleButton { Tag: string slot })
+            SelectMappingSlot(slot, openDropDown: true);
+    }
+
+    private void SelectMappingSlot(string slot, bool openDropDown)
+    {
+        _selectedMappingSlot = slot;
+        MappingActionCombo.Tag = slot;
+
+        _populatingCombos = true;
+        try
+        {
+            SelectActionInCombo(MappingActionCombo, ReadMapping(slot));
+        }
+        finally
+        {
+            _populatingCombos = false;
+        }
+
+        RefreshMappingHotspots();
+        if (openDropDown)
+            Dispatcher.BeginInvoke(() => MappingActionCombo.IsDropDownOpen = true);
+    }
+
+    private void RefreshMappingHotspots()
+    {
+        SelectedMappingName.Text = MappingSlotDisplayName(_selectedMappingSlot);
+        foreach (var hotspot in MappingHotspots())
+        {
+            if (hotspot.Tag is not string slot) continue;
+            hotspot.IsChecked = slot == _selectedMappingSlot;
+            hotspot.ToolTip = $"{hotspot.Content} · {MappingActionDisplayName(ReadMapping(slot))}";
+        }
+    }
+
+    private IEnumerable<ToggleButton> MappingHotspots() =>
+        PsHotspotCanvas.Children.OfType<ToggleButton>()
+            .Concat(XboxHotspotCanvas.Children.OfType<ToggleButton>());
+
+    private string MappingSlotDisplayName(string slot) => (_showXboxController, slot) switch
+    {
+        (true, "L2") => "LT",
+        (true, "R2") => "RT",
+        (true, "Cross") => "A",
+        (true, "Circle") => "B",
+        (true, "Square") => "X",
+        (true, "Triangle") => "Y",
+        (true, "L3") => "LSB",
+        (true, "R3") => "RSB",
+        (false, "Cross") => "✕",
+        (false, "Circle") => "○",
+        (false, "Square") => "□",
+        (false, "Triangle") => "△",
+        _ => slot,
+    };
+
+    private string MappingActionDisplayName(string actionId)
+    {
+        if (ButtonActions.TryParseKey(actionId, out var vk))
+            return _loc.Get("Mapping.KeyPrefix") + KeyFriendlyName(vk);
+        return _loc.Get($"Mapping.{actionId}");
     }
 
     private string ReadMapping(string slot) => slot switch
@@ -478,6 +598,7 @@ public partial class MainWindow : Window
         _mapper.ReleaseHeldInputs();
         WriteMapping(slot, actionId);
         App.Current.SaveConfig();
+        RefreshMappingHotspots();
     }
 
     private void CompleteKeyCapture(ComboBox combo, string slot, ushort? vk)
@@ -500,6 +621,7 @@ public partial class MainWindow : Window
         {
             _populatingCombos = false;
         }
+        RefreshMappingHotspots();
     }
 
     private void OnLanguageChanged(object sender, SelectionChangedEventArgs e)

@@ -34,6 +34,8 @@
 
   <ItemGroup>
     <Resource Include="Resources\tray.ico" />
+    <Resource Include="Resources\outline_1.png" />
+    <Resource Include="Resources\outline_2.png" />
   </ItemGroup>
 
 </Project>

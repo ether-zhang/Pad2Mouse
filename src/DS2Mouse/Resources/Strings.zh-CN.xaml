@@ -26,7 +26,18 @@
     <s:String x:Key="Section.RightStick">右摇杆 — 滚轮</s:String>
     <s:String x:Key="Section.Whitelist">全屏白名单（按进程名 — 全屏时自动禁用映射，列入此处则保留）</s:String>
     <s:String x:Key="Section.Mapping">按键映射</s:String>
+    <s:String x:Key="Section.Sensitivity">灵敏度</s:String>
     <s:String x:Key="Section.Settings">设置</s:String>
+
+    <s:String x:Key="Sensitivity.Hint">选择一个预设，或展开自定义参数</s:String>
+    <s:String x:Key="Preset.Precise">精细</s:String>
+    <s:String x:Key="Preset.PreciseHint">低速、稳定</s:String>
+    <s:String x:Key="Preset.Balanced">均衡</s:String>
+    <s:String x:Key="Preset.BalancedHint">日常推荐</s:String>
+    <s:String x:Key="Preset.Fast">快速</s:String>
+    <s:String x:Key="Preset.FastHint">大屏、高速</s:String>
+    <s:String x:Key="Preset.Custom">自定义</s:String>
+    <s:String x:Key="Preset.CustomHint">调整详细参数</s:String>
 
     <s:String x:Key="Field.Sensitivity">灵敏度</s:String>
     <s:String x:Key="Field.Deadzone">死区</s:String>
@@ -52,6 +63,9 @@
     <s:String x:Key="Mapping.ToggleApp">切换映射启停</s:String>
     <s:String x:Key="Mapping.OnScreenKeyboard">打开/关闭屏幕键盘</s:String>
     <s:String x:Key="Mapping.CenterCursor">鼠标归位主屏中央</s:String>
+    <s:String x:Key="Mapping.SelectHint">点击手柄上的高亮按键以修改映射</s:String>
+    <s:String x:Key="Mapping.SelectedButton">当前按键</s:String>
+    <s:String x:Key="Mapping.Fixed">固定映射</s:String>
 
     <!-- Action options for configurable mapping dropdowns. -->
     <s:String x:Key="Mapping.None">无</s:String>

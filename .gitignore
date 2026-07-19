@@ -51,6 +51,8 @@ steam/
 steamworks_sdk_*/
 steamworks_sdk_*.zip
 *.png
+!src/DS2Mouse/Resources/outline_1.png
+!src/DS2Mouse/Resources/outline_2.png
 
 # Personal Claude Code settings (per-machine)
 .claude/

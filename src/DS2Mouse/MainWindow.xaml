@@ -4,13 +4,116 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="{DynamicResource Window.Title}"
         Icon="pack://application:,,,/Resources/tray.ico"
-        Height="600" Width="580" MinHeight="500" MinWidth="500"
+        Height="760" Width="980" MinHeight="620" MinWidth="820"
         FontFamily="Segoe UI" FontSize="13"
         Background="{DynamicResource WindowBackground}"
         Foreground="{DynamicResource ForegroundBrush}"
         WindowStyle="None"
         ResizeMode="CanResize"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style x:Key="ControllerModeToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushNormal}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="ModeBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ModeBorder" Property="Background" Value="{DynamicResource ControlHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ModeBorder" Property="Background" Value="{DynamicResource ControlPressed}"/>
+                                <Setter TargetName="ModeBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ControllerHotspotStyle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#D0202A33"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="HotspotBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="24">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HotspotBorder" Property="Background" Value="#EE34495A"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="HotspotBorder" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="HotspotBorder" Property="BorderBrush" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SensitivityPresetStyle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ControlBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushNormal}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="MinHeight" Value="72"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="PresetBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PresetBorder" Property="Background" Value="{DynamicResource ControlHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="PresetBorder" Property="Background" Value="{DynamicResource ControlPressed}"/>
+                                <Setter TargetName="PresetBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <shell:WindowChrome.WindowChrome>
         <!-- CaptionHeight defines the drag region; UseAeroCaptionButtons=False
              hides the system min/max/close so our custom buttons own the
@@ -76,169 +179,233 @@
 
                 <Separator Margin="0,12,0,12"/>
 
-                <!-- Button mapping reference: 2 entries per row -->
-                <StackPanel Margin="0,0,0,8">
-                    <TextBlock Text="{DynamicResource Section.Mapping}" FontWeight="Bold" Margin="0,0,0,4"/>
+                <!-- Controller-first mapping editor. The Viewbox scales image and
+                     hotspots together, keeping hit targets aligned at any window size. -->
+                <Border Background="{DynamicResource PanelBackground}" CornerRadius="10" Padding="12" Margin="0,0,0,12">
                     <Grid>
-                        <Grid.Resources>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Margin" Value="0,2,0,2"/>
-                            </Style>
-                        </Grid.Resources>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="80"/>   <!-- label 1 -->
-                            <ColumnDefinition Width="*"/>    <!-- value 1 -->
-                            <ColumnDefinition Width="16"/>   <!-- gap -->
-                            <ColumnDefinition Width="110"/>  <!-- label 2 (wider for "Create + Options" / "View + Menu") -->
-                            <ColumnDefinition Width="*"/>    <!-- value 2 -->
-                        </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
-                            <RowDefinition/><RowDefinition/><RowDefinition/>
-                            <RowDefinition/><RowDefinition/><RowDefinition/>
-                            <RowDefinition/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
+                        <Grid Margin="2,0,2,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Section.Mapping}" FontSize="16" FontWeight="SemiBold"/>
+                                <TextBlock Text="{DynamicResource Mapping.SelectHint}"
+                                           Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <ToggleButton x:Name="PsViewButton" Content="PlayStation" IsChecked="True"
+                                              Style="{StaticResource ControllerModeToggleStyle}"
+                                              Click="OnControllerModeClick" Tag="PlayStation"/>
+                                <ToggleButton x:Name="XboxViewButton" Content="Xbox" Margin="6,0,0,0"
+                                              Style="{StaticResource ControllerModeToggleStyle}"
+                                              Click="OnControllerModeClick" Tag="Xbox"/>
+                            </StackPanel>
+                        </Grid>
 
-                        <!-- Rows 0-2: fixed (non-configurable) mappings -->
-                        <TextBlock Grid.Row="0" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.LeftStick}"/>
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{DynamicResource Mapping.MouseMove}"/>
-                        <TextBlock Grid.Row="0" Grid.Column="3" FontFamily="Consolas" Text="{DynamicResource Mapping.RightStick}"/>
-                        <TextBlock Grid.Row="0" Grid.Column="4" Text="{DynamicResource Mapping.MouseScroll}"/>
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="260"/>
+                            </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" FontFamily="Consolas" Text="{DynamicResource Mapping.DPad}"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{DynamicResource Mapping.ArrowKeys}"/>
-                        <TextBlock x:Name="LblL3R3" Grid.Row="1" Grid.Column="3" FontFamily="Consolas" Text="L3 + R3"/>
-                        <TextBlock Grid.Row="1" Grid.Column="4" Text="{DynamicResource Mapping.ToggleApp}"/>
+                            <Grid MinHeight="350" Margin="0,0,14,0" ClipToBounds="True">
+                                <Viewbox x:Name="PsControllerView" Stretch="Uniform">
+                                    <Grid Width="768" Height="512">
+                                        <Image Source="pack://application:,,,/Resources/outline_1.png" Stretch="Fill"/>
+                                        <Canvas x:Name="PsHotspotCanvas">
+                                            <ToggleButton Content="L2" Tag="L2" Width="64" Height="34" Canvas.Left="137" Canvas.Top="52"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="R2" Tag="R2" Width="64" Height="34" Canvas.Left="568" Canvas.Top="52"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="L3" Tag="L3" Width="54" Height="54" Canvas.Left="247" Canvas.Top="248"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="R3" Tag="R3" Width="54" Height="54" Canvas.Left="466" Canvas.Top="248"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="△" Tag="Triangle" Width="38" Height="38" Canvas.Left="571" Canvas.Top="126"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="□" Tag="Square" Width="38" Height="38" Canvas.Left="523" Canvas.Top="172"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="○" Tag="Circle" Width="38" Height="38" Canvas.Left="618" Canvas.Top="172"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="✕" Tag="Cross" Width="38" Height="38" Canvas.Left="571" Canvas.Top="216"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                        </Canvas>
+                                    </Grid>
+                                </Viewbox>
 
-                        <TextBlock x:Name="LblL1R1" Grid.Row="2" Grid.Column="0" FontFamily="Consolas" Text="L1 + R1"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{DynamicResource Mapping.OnScreenKeyboard}"/>
-                        <TextBlock x:Name="LblShareOpt" Grid.Row="2" Grid.Column="3" FontFamily="Consolas" FontSize="11" VerticalAlignment="Center" Text="Create + Options"/>
-                        <TextBlock Grid.Row="2" Grid.Column="4" Text="{DynamicResource Mapping.CenterCursor}"/>
+                                <Viewbox x:Name="XboxControllerView" Stretch="Uniform" Visibility="Collapsed">
+                                    <Grid Width="768" Height="512">
+                                        <Image Source="pack://application:,,,/Resources/outline_2.png" Stretch="Fill"/>
+                                        <Canvas x:Name="XboxHotspotCanvas">
+                                            <ToggleButton Content="LT" Tag="L2" Width="64" Height="34" Canvas.Left="194" Canvas.Top="52"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="RT" Tag="R2" Width="64" Height="34" Canvas.Left="493" Canvas.Top="52"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="LSB" Tag="L3" Width="58" Height="58" Canvas.Left="211" Canvas.Top="163"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="RSB" Tag="R3" Width="58" Height="58" Canvas.Left="436" Canvas.Top="243"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="Y" Tag="Triangle" Width="38" Height="38" Canvas.Left="496" Canvas.Top="139"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="X" Tag="Square" Width="38" Height="38" Canvas.Left="459" Canvas.Top="171"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="B" Tag="Circle" Width="38" Height="38" Canvas.Left="533" Canvas.Top="171"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            <ToggleButton Content="A" Tag="Cross" Width="38" Height="38" Canvas.Left="496" Canvas.Top="205"
+                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                        </Canvas>
+                                    </Grid>
+                                </Viewbox>
+                            </Grid>
 
-                        <!-- Rows 3-5: configurable button mappings (L2 left, R2 right) -->
-                        <TextBlock x:Name="LblL2" Grid.Row="3" Grid.Column="0" FontFamily="Consolas" Text="L2"/>
-                        <ComboBox Grid.Row="3" Grid.Column="1" x:Name="MapL2Combo" Tag="L2"
-                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
-                        <TextBlock x:Name="LblR2" Grid.Row="3" Grid.Column="3" FontFamily="Consolas" Text="R2"/>
-                        <ComboBox Grid.Row="3" Grid.Column="4" x:Name="MapR2Combo" Tag="R2"
-                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
+                            <Border Grid.Column="1" Background="{DynamicResource ControlBackground}"
+                                    BorderBrush="{DynamicResource BorderBrushSubtle}" BorderThickness="1"
+                                    CornerRadius="8" Padding="14">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Mapping.SelectedButton}"
+                                               Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                    <TextBlock x:Name="SelectedMappingName" Text="✕" FontSize="26" FontWeight="SemiBold" Margin="0,2,0,10"/>
+                                    <ComboBox x:Name="MappingActionCombo" Tag="Cross" Padding="6"
+                                              SelectionChanged="OnMappingChanged"/>
 
-                        <!-- Row 4: ✕ | ○ -->
-                        <TextBlock x:Name="LblCross" Grid.Row="4" Grid.Column="0" FontFamily="Consolas" Text="✕"/>
-                        <ComboBox Grid.Row="4" Grid.Column="1" x:Name="MapCrossCombo" Tag="Cross"
-                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
-                        <TextBlock x:Name="LblCircle" Grid.Row="4" Grid.Column="3" FontFamily="Consolas" Text="○"/>
-                        <ComboBox Grid.Row="4" Grid.Column="4" x:Name="MapCircleCombo" Tag="Circle"
-                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
-
-                        <!-- Row 5: □ | △ -->
-                        <TextBlock x:Name="LblSquare" Grid.Row="5" Grid.Column="0" FontFamily="Consolas" Text="□"/>
-                        <ComboBox Grid.Row="5" Grid.Column="1" x:Name="MapSquareCombo" Tag="Square"
-                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
-                        <TextBlock x:Name="LblTriangle" Grid.Row="5" Grid.Column="3" FontFamily="Consolas" Text="△"/>
-                        <ComboBox Grid.Row="5" Grid.Column="4" x:Name="MapTriangleCombo" Tag="Triangle"
-                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
-
-                        <!-- Row 6: L3 | R3 (individual stick-click mappings; L3+R3 combo still toggles mapping) -->
-                        <TextBlock x:Name="LblL3" Grid.Row="6" Grid.Column="0" FontFamily="Consolas" Text="L3"/>
-                        <ComboBox Grid.Row="6" Grid.Column="1" x:Name="MapL3Combo" Tag="L3"
-                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
-                        <TextBlock x:Name="LblR3" Grid.Row="6" Grid.Column="3" FontFamily="Consolas" Text="R3"/>
-                        <ComboBox Grid.Row="6" Grid.Column="4" x:Name="MapR3Combo" Tag="R3"
-                                  SelectionChanged="OnMappingChanged" Padding="4" Margin="0,1,0,1"/>
+                                    <Separator Margin="0,14,0,12"/>
+                                    <TextBlock Text="{DynamicResource Mapping.Fixed}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Grid.Row="0" Text="{DynamicResource Mapping.LeftStick}" Margin="0,2,10,2"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{DynamicResource Mapping.MouseMove}" Margin="0,2"/>
+                                        <TextBlock Grid.Row="1" Text="{DynamicResource Mapping.RightStick}" Margin="0,2,10,2"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{DynamicResource Mapping.MouseScroll}" Margin="0,2"/>
+                                        <TextBlock Grid.Row="2" Text="{DynamicResource Mapping.DPad}" Margin="0,2,10,2"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{DynamicResource Mapping.ArrowKeys}" Margin="0,2"/>
+                                        <TextBlock x:Name="FixedToggleComboLabel" Grid.Row="3" Text="L3 + R3" Margin="0,2,10,2"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{DynamicResource Mapping.ToggleApp}" Margin="0,2"/>
+                                        <TextBlock x:Name="FixedKeyboardComboLabel" Grid.Row="4" Text="L1 + R1" Margin="0,2,10,2"/>
+                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{DynamicResource Mapping.OnScreenKeyboard}" TextWrapping="Wrap" Margin="0,2"/>
+                                        <TextBlock x:Name="FixedCenterComboLabel" Grid.Row="5" Text="Create + Options" Margin="0,2,10,2"/>
+                                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{DynamicResource Mapping.CenterCursor}" TextWrapping="Wrap" Margin="0,2"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                     </Grid>
-                </StackPanel>
+                </Border>
 
-                <Separator Margin="0,4,0,12"/>
+                <!-- Sensitivity presets stay compact; detailed sliders only appear
+                     after the user explicitly chooses Custom. -->
+                <Border Background="{DynamicResource PanelBackground}" CornerRadius="10" Padding="14" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Section.Sensitivity}" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="{DynamicResource Sensitivity.Hint}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,10"/>
+                        <UniformGrid Columns="4">
+                            <ToggleButton x:Name="PrecisePresetButton" Tag="Precise" Style="{StaticResource SensitivityPresetStyle}"
+                                          Click="OnSensitivityPresetClick">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Preset.Precise}" FontWeight="SemiBold" FontSize="14"/>
+                                    <TextBlock Text="{DynamicResource Preset.PreciseHint}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </ToggleButton>
+                            <ToggleButton x:Name="BalancedPresetButton" Tag="Balanced" Style="{StaticResource SensitivityPresetStyle}"
+                                          Click="OnSensitivityPresetClick">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Preset.Balanced}" FontWeight="SemiBold" FontSize="14"/>
+                                    <TextBlock Text="{DynamicResource Preset.BalancedHint}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </ToggleButton>
+                            <ToggleButton x:Name="FastPresetButton" Tag="Fast" Style="{StaticResource SensitivityPresetStyle}"
+                                          Click="OnSensitivityPresetClick">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Preset.Fast}" FontWeight="SemiBold" FontSize="14"/>
+                                    <TextBlock Text="{DynamicResource Preset.FastHint}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </ToggleButton>
+                            <ToggleButton x:Name="CustomPresetButton" Tag="Custom" Margin="0"
+                                          Style="{StaticResource SensitivityPresetStyle}" Click="OnSensitivityPresetClick">
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Preset.Custom}" FontWeight="SemiBold" FontSize="14"/>
+                                    <TextBlock Text="{DynamicResource Preset.CustomHint}" Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </ToggleButton>
+                        </UniformGrid>
 
-                <!-- Sensitivity controls -->
-                <StackPanel>
-                    <TextBlock Text="{DynamicResource Section.LeftStick}" FontWeight="Bold" Margin="0,0,0,4"/>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="60"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{DynamicResource Field.Sensitivity}" VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" x:Name="SensSlider" Minimum="2" Maximum="40"
-                                TickFrequency="1" IsSnapToTickEnabled="True"
-                                Value="12" ValueChanged="OnSensChanged" Margin="8,0"/>
-                        <TextBlock Grid.Column="2" x:Name="SensVal" Text="12" VerticalAlignment="Center" TextAlignment="Right"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="60"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{DynamicResource Field.Deadzone}" VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" x:Name="DzSlider" Minimum="0" Maximum="0.4"
-                                Value="0.10" ValueChanged="OnDzChanged" Margin="8,0"/>
-                        <TextBlock Grid.Column="2" x:Name="DzVal" Text="0.10" VerticalAlignment="Center" TextAlignment="Right"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="60"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{DynamicResource Field.AccelMax}" VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" x:Name="AccelMaxSlider" Minimum="1.0" Maximum="5.0"
-                                TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                Value="2.5" ValueChanged="OnAccelMaxChanged" Margin="8,0"/>
-                        <TextBlock Grid.Column="2" x:Name="AccelMaxVal" Text="2.5" VerticalAlignment="Center" TextAlignment="Right"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="60"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{DynamicResource Field.AccelRamp}" VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" x:Name="AccelRampSlider" Minimum="0.2" Maximum="3.0"
-                                TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                Value="1.0" ValueChanged="OnAccelRampChanged" Margin="8,0"/>
-                        <TextBlock Grid.Column="2" x:Name="AccelRampVal" Text="1.0" VerticalAlignment="Center" TextAlignment="Right"/>
-                    </Grid>
+                        <Border x:Name="CustomSensitivityPanel" Visibility="Collapsed"
+                                Background="{DynamicResource ControlBackground}" CornerRadius="8" Padding="14" Margin="0,12,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="24"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Section.LeftStick}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{DynamicResource Field.Sensitivity}" VerticalAlignment="Center"/>
+                                        <Slider Grid.Column="1" x:Name="SensSlider" Minimum="2" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                Value="12" ValueChanged="OnSensChanged" Margin="8,0"/>
+                                        <TextBlock Grid.Column="2" x:Name="SensVal" Text="12" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{DynamicResource Field.Deadzone}" VerticalAlignment="Center"/>
+                                        <Slider Grid.Column="1" x:Name="DzSlider" Minimum="0" Maximum="0.4" Value="0.10" ValueChanged="OnDzChanged" Margin="8,0"/>
+                                        <TextBlock Grid.Column="2" x:Name="DzVal" Text="0.10" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{DynamicResource Field.AccelMax}" VerticalAlignment="Center"/>
+                                        <Slider Grid.Column="1" x:Name="AccelMaxSlider" Minimum="1.0" Maximum="5.0" TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                                Value="2.5" ValueChanged="OnAccelMaxChanged" Margin="8,0"/>
+                                        <TextBlock Grid.Column="2" x:Name="AccelMaxVal" Text="2.5" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{DynamicResource Field.AccelRamp}" VerticalAlignment="Center"/>
+                                        <Slider Grid.Column="1" x:Name="AccelRampSlider" Minimum="0.2" Maximum="3.0" TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                                Value="1.0" ValueChanged="OnAccelRampChanged" Margin="8,0"/>
+                                        <TextBlock Grid.Column="2" x:Name="AccelRampVal" Text="1.0" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    </Grid>
+                                </StackPanel>
 
-                    <TextBlock Text="{DynamicResource Section.RightStick}" FontWeight="Bold" Margin="0,8,0,4"/>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="60"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{DynamicResource Field.ScrollSpeed}" VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" x:Name="ScrollSlider" Minimum="1" Maximum="30"
-                                TickFrequency="1" IsSnapToTickEnabled="True"
-                                Value="8" ValueChanged="OnScrollChanged" Margin="8,0"/>
-                        <TextBlock Grid.Column="2" x:Name="ScrollVal" Text="8" VerticalAlignment="Center" TextAlignment="Right"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="60"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{DynamicResource Field.AccelMax}" VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" x:Name="ScrollAccelMaxSlider" Minimum="1.0" Maximum="5.0"
-                                TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                Value="2.5" ValueChanged="OnScrollAccelMaxChanged" Margin="8,0"/>
-                        <TextBlock Grid.Column="2" x:Name="ScrollAccelMaxVal" Text="2.5" VerticalAlignment="Center" TextAlignment="Right"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="60"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{DynamicResource Field.AccelRamp}" VerticalAlignment="Center"/>
-                        <Slider Grid.Column="1" x:Name="ScrollAccelRampSlider" Minimum="0.2" Maximum="3.0"
-                                TickFrequency="0.1" IsSnapToTickEnabled="True"
-                                Value="1.0" ValueChanged="OnScrollAccelRampChanged" Margin="8,0"/>
-                        <TextBlock Grid.Column="2" x:Name="ScrollAccelRampVal" Text="1.0" VerticalAlignment="Center" TextAlignment="Right"/>
-                    </Grid>
-                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="{DynamicResource Section.RightStick}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{DynamicResource Field.ScrollSpeed}" VerticalAlignment="Center"/>
+                                        <Slider Grid.Column="1" x:Name="ScrollSlider" Minimum="1" Maximum="30" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                Value="8" ValueChanged="OnScrollChanged" Margin="8,0"/>
+                                        <TextBlock Grid.Column="2" x:Name="ScrollVal" Text="8" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{DynamicResource Field.AccelMax}" VerticalAlignment="Center"/>
+                                        <Slider Grid.Column="1" x:Name="ScrollAccelMaxSlider" Minimum="1.0" Maximum="5.0" TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                                Value="2.5" ValueChanged="OnScrollAccelMaxChanged" Margin="8,0"/>
+                                        <TextBlock Grid.Column="2" x:Name="ScrollAccelMaxVal" Text="2.5" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="125"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{DynamicResource Field.AccelRamp}" VerticalAlignment="Center"/>
+                                        <Slider Grid.Column="1" x:Name="ScrollAccelRampSlider" Minimum="0.2" Maximum="3.0" TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                                Value="1.0" ValueChanged="OnScrollAccelRampChanged" Margin="8,0"/>
+                                        <TextBlock Grid.Column="2" x:Name="ScrollAccelRampVal" Text="1.0" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
 
                 <!-- Whitelist -->
                 <StackPanel Margin="0,12,0,8">

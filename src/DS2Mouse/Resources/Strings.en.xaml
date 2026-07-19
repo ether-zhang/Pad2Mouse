@@ -26,7 +26,18 @@
     <s:String x:Key="Section.RightStick">Right stick — scroll</s:String>
     <s:String x:Key="Section.Whitelist">Fullscreen whitelist (process names — mapping auto-disables in fullscreen UNLESS the process is listed)</s:String>
     <s:String x:Key="Section.Mapping">Button mapping</s:String>
+    <s:String x:Key="Section.Sensitivity">Sensitivity</s:String>
     <s:String x:Key="Section.Settings">Settings</s:String>
+
+    <s:String x:Key="Sensitivity.Hint">Choose a preset or open the custom controls</s:String>
+    <s:String x:Key="Preset.Precise">Precise</s:String>
+    <s:String x:Key="Preset.PreciseHint">Slow and steady</s:String>
+    <s:String x:Key="Preset.Balanced">Balanced</s:String>
+    <s:String x:Key="Preset.BalancedHint">Recommended</s:String>
+    <s:String x:Key="Preset.Fast">Fast</s:String>
+    <s:String x:Key="Preset.FastHint">Large displays</s:String>
+    <s:String x:Key="Preset.Custom">Custom</s:String>
+    <s:String x:Key="Preset.CustomHint">Tune every value</s:String>
 
     <s:String x:Key="Field.Sensitivity">Sensitivity</s:String>
     <s:String x:Key="Field.Deadzone">Deadzone</s:String>
@@ -52,6 +63,9 @@
     <s:String x:Key="Mapping.ToggleApp">Toggle mapping</s:String>
     <s:String x:Key="Mapping.OnScreenKeyboard">Toggle on-screen keyboard</s:String>
     <s:String x:Key="Mapping.CenterCursor">Center cursor on primary screen</s:String>
+    <s:String x:Key="Mapping.SelectHint">Click a highlighted controller button to change its mapping</s:String>
+    <s:String x:Key="Mapping.SelectedButton">Selected button</s:String>
+    <s:String x:Key="Mapping.Fixed">Fixed mappings</s:String>
 
     <!-- Action options for configurable mapping dropdowns. -->
     <s:String x:Key="Mapping.None">None</s:String>
