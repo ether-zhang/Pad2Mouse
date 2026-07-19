@@ -63,9 +63,10 @@
     <s:String x:Key="Mapping.ToggleApp">Toggle mapping</s:String>
     <s:String x:Key="Mapping.OnScreenKeyboard">Toggle on-screen keyboard</s:String>
     <s:String x:Key="Mapping.CenterCursor">Center cursor on primary screen</s:String>
-    <s:String x:Key="Mapping.SelectHint">Click a highlighted controller button to change its mapping</s:String>
-    <s:String x:Key="Mapping.SelectedButton">Selected button</s:String>
-    <s:String x:Key="Mapping.Fixed">Fixed mappings</s:String>
+    <s:String x:Key="Mapping.SelectHint">Click a controller button or use the list to change its mapping</s:String>
+    <s:String x:Key="Mapping.Configurable">Configurable buttons</s:String>
+    <s:String x:Key="Mapping.ListHint">Select a button and change its mapping</s:String>
+    <s:String x:Key="Mapping.PresetCombos">Preset shortcuts</s:String>
 
     <!-- Action options for configurable mapping dropdowns. -->
     <s:String x:Key="Mapping.None">None</s:String>

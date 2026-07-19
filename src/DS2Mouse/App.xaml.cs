@@ -127,8 +127,7 @@ public partial class App : Application
         {
             ControllerKind.DualSense                       => ((Brush?)Solid(PsBackground),   (Brush?)Solid(PsAccent)),
             ControllerKind.Xbox                            => ((Brush?)Solid(XboxBackground), (Brush?)Solid(XboxAccent)),
-            ControllerKind.DualSense | ControllerKind.Xbox => ((Brush?)Gradient(PsBackground, XboxBackground),
-                                                               (Brush?)Gradient(PsAccent,     XboxAccent)),
+            ControllerKind.DualSense | ControllerKind.Xbox => ((Brush?)Solid(PsBackground),   (Brush?)Solid(PsAccent)),
             _                                              => ((Brush?)null, (Brush?)null), // keep previous
         };
         if (bg     != null) Resources["WindowBackground"] = bg;
@@ -139,12 +138,6 @@ public partial class App : Application
             var b = new SolidColorBrush(c);
             b.Freeze();
             return b;
-        }
-        static LinearGradientBrush Gradient(Color a, Color b)
-        {
-            var g = new LinearGradientBrush(a, b, new Point(0, 0), new Point(1, 0));
-            g.Freeze();
-            return g;
         }
     }
 

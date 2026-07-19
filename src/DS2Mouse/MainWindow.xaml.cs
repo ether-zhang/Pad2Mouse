@@ -78,7 +78,7 @@ public partial class MainWindow : Window
         NotifyCheck.IsChecked = _config.EnableNotifications;
         AutoStartCheck.IsChecked = StartupRegistration.IsRegistered();
         SelectLanguageInCombo(_loc.CurrentLanguage);
-        PopulateMappingCombo();
+        PopulateMappingCombos();
         RefreshWhitelistBox();
         SetConnectionLabel(_reader.ConnectionType);
         SelectControllerForKind(_reader.Kind);
@@ -96,36 +96,21 @@ public partial class MainWindow : Window
 
     private void OnControllerKindChanged(ControllerKind kind)
     {
-        // Keep the last visible controller when everything disconnects.
-        if (kind == ControllerKind.None) return;
         Dispatcher.BeginInvoke(() => SelectControllerForKind(kind));
     }
 
-    private void SelectControllerForKind(ControllerKind kind)
-    {
-        if (kind == ControllerKind.Xbox) SetControllerMode(showXbox: true);
-        else if (kind == ControllerKind.DualSense) SetControllerMode(showXbox: false);
-        else SetControllerMode(_showXboxController); // both connected: preserve manual selection
-    }
-
-    private void OnControllerModeClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is ToggleButton { Tag: string mode })
-            SetControllerMode(mode == "Xbox");
-    }
+    private void SelectControllerForKind(ControllerKind kind) =>
+        SetControllerMode(showXbox: kind == ControllerKind.Xbox);
 
     private void SetControllerMode(bool showXbox)
     {
         _showXboxController = showXbox;
-        PsViewButton.IsChecked = !showXbox;
-        XboxViewButton.IsChecked = showXbox;
         PsControllerView.Visibility = showXbox ? Visibility.Collapsed : Visibility.Visible;
         XboxControllerView.Visibility = showXbox ? Visibility.Visible : Visibility.Collapsed;
-
-        FixedToggleComboLabel.Text = showXbox ? "LSB + RSB" : "L3 + R3";
-        FixedKeyboardComboLabel.Text = showXbox ? "LB + RB" : "L1 + R1";
-        FixedCenterComboLabel.Text = showXbox ? "View + Menu" : "Create + Options";
-        RefreshMappingHotspots();
+        PresetToggleComboLabel.Text = showXbox ? "LSB + RSB" : "L3 + R3";
+        PresetKeyboardComboLabel.Text = showXbox ? "LB + RB" : "L1 + R1";
+        PresetCenterComboLabel.Text = showXbox ? "View + Menu" : "Create + Options";
+        RefreshMappingSelection();
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -205,8 +190,8 @@ public partial class MainWindow : Window
         SetConnectionLabel(_reader.ConnectionType);
         UpdateGuardStatus();
         // Dynamic Key items and hotspot tooltips embed localized text.
-        PopulateMappingCombo();
-        RefreshMappingHotspots();
+        PopulateMappingCombos();
+        RefreshMappingSelection();
     }
 
     private void OnEnableToggle(object sender, RoutedEventArgs e)
@@ -388,24 +373,27 @@ public partial class MainWindow : Window
         else                                  StartupRegistration.Unregister();
     }
 
-    private void PopulateMappingCombo()
+    private void PopulateMappingCombos()
     {
         _populatingCombos = true;
         try
         {
-            MappingActionCombo.Items.Clear();
-            foreach (var id in ButtonActions.All)
+            foreach (var combo in MappingCombos())
             {
-                var item = new ComboBoxItem { Tag = id };
-                item.SetResourceReference(ContentControl.ContentProperty, $"Mapping.{id}");
-                MappingActionCombo.Items.Add(item);
-            }
-            var pick = new ComboBoxItem { Tag = SentinelPickKey };
-            pick.SetResourceReference(ContentControl.ContentProperty, "Mapping.PickKey");
-            MappingActionCombo.Items.Add(pick);
+                combo.Items.Clear();
+                foreach (var id in ButtonActions.All)
+                {
+                    var item = new ComboBoxItem { Tag = id };
+                    item.SetResourceReference(ContentControl.ContentProperty, $"Mapping.{id}");
+                    combo.Items.Add(item);
+                }
+                var pick = new ComboBoxItem { Tag = SentinelPickKey };
+                pick.SetResourceReference(ContentControl.ContentProperty, "Mapping.PickKey");
+                combo.Items.Add(pick);
 
-            MappingActionCombo.Tag = _selectedMappingSlot;
-            SelectActionInCombo(MappingActionCombo, ReadMapping(_selectedMappingSlot));
+                if (combo.Tag is string slot)
+                    SelectActionInCombo(combo, ReadMapping(slot));
+            }
         }
         finally
         {
@@ -419,40 +407,81 @@ public partial class MainWindow : Window
             SelectMappingSlot(slot, openDropDown: true);
     }
 
+    private void OnMappingListButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleButton { Tag: string slot })
+            SelectMappingSlot(slot, openDropDown: true);
+    }
+
+    private void OnMappingEditorActivated(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (sender is ComboBox { Tag: string slot })
+            SelectMappingSlot(slot, openDropDown: false);
+    }
+
     private void SelectMappingSlot(string slot, bool openDropDown)
     {
         _selectedMappingSlot = slot;
-        MappingActionCombo.Tag = slot;
-
-        _populatingCombos = true;
-        try
-        {
-            SelectActionInCombo(MappingActionCombo, ReadMapping(slot));
-        }
-        finally
-        {
-            _populatingCombos = false;
-        }
-
-        RefreshMappingHotspots();
+        RefreshMappingSelection();
         if (openDropDown)
-            Dispatcher.BeginInvoke(() => MappingActionCombo.IsDropDownOpen = true);
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                var combo = MappingComboFor(slot);
+                combo.Focus();
+                combo.IsDropDownOpen = true;
+            });
+        }
     }
 
-    private void RefreshMappingHotspots()
+    private void RefreshMappingSelection()
     {
-        SelectedMappingName.Text = MappingSlotDisplayName(_selectedMappingSlot);
         foreach (var hotspot in MappingHotspots())
         {
             if (hotspot.Tag is not string slot) continue;
             hotspot.IsChecked = slot == _selectedMappingSlot;
-            hotspot.ToolTip = $"{hotspot.Content} · {MappingActionDisplayName(ReadMapping(slot))}";
+            hotspot.ToolTip = $"{MappingSlotDisplayName(slot)} · {MappingActionDisplayName(ReadMapping(slot))}";
+        }
+
+        foreach (var button in MappingListButtons())
+        {
+            if (button.Tag is not string slot) continue;
+            button.Content = MappingSlotDisplayName(slot);
+            button.IsChecked = slot == _selectedMappingSlot;
+            button.ToolTip = MappingActionDisplayName(ReadMapping(slot));
         }
     }
 
     private IEnumerable<ToggleButton> MappingHotspots() =>
         PsHotspotCanvas.Children.OfType<ToggleButton>()
             .Concat(XboxHotspotCanvas.Children.OfType<ToggleButton>());
+
+    private IEnumerable<ComboBox> MappingCombos()
+    {
+        yield return MapL2Combo;
+        yield return MapR2Combo;
+        yield return MapCrossCombo;
+        yield return MapCircleCombo;
+        yield return MapSquareCombo;
+        yield return MapTriangleCombo;
+        yield return MapL3Combo;
+        yield return MapR3Combo;
+    }
+
+    private IEnumerable<ToggleButton> MappingListButtons()
+    {
+        yield return MapL2Button;
+        yield return MapR2Button;
+        yield return MapCrossButton;
+        yield return MapCircleButton;
+        yield return MapSquareButton;
+        yield return MapTriangleButton;
+        yield return MapL3Button;
+        yield return MapR3Button;
+    }
+
+    private ComboBox MappingComboFor(string slot) =>
+        MappingCombos().First(combo => Equals(combo.Tag, slot));
 
     private string MappingSlotDisplayName(string slot) => (_showXboxController, slot) switch
     {
@@ -598,7 +627,7 @@ public partial class MainWindow : Window
         _mapper.ReleaseHeldInputs();
         WriteMapping(slot, actionId);
         App.Current.SaveConfig();
-        RefreshMappingHotspots();
+        SelectMappingSlot(slot, openDropDown: false);
     }
 
     private void CompleteKeyCapture(ComboBox combo, string slot, ushort? vk)
@@ -621,7 +650,7 @@ public partial class MainWindow : Window
         {
             _populatingCombos = false;
         }
-        RefreshMappingHotspots();
+        SelectMappingSlot(slot, openDropDown: false);
     }
 
     private void OnLanguageChanged(object sender, SelectionChangedEventArgs e)
