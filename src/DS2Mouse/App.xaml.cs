@@ -21,6 +21,8 @@ public partial class App : Application
     private MenuItem? _toggleMenuItem;
     private MenuItem? _showMenuItem;
     private MenuItem? _exitMenuItem;
+    private ImageSource? _enabledTrayIcon;
+    private ImageSource? _disabledTrayIcon;
 
     public AppConfig Config => _config!;
     public IControllerReader Reader => _reader!;
@@ -68,10 +70,13 @@ public partial class App : Application
 
     private void InitTray()
     {
+        _enabledTrayIcon = new System.Windows.Media.Imaging.BitmapImage(
+            new Uri("pack://application:,,,/Resources/tray.ico", UriKind.Absolute));
+        _disabledTrayIcon = new System.Windows.Media.Imaging.BitmapImage(
+            new Uri("pack://application:,,,/Resources/tray-disabled.ico", UriKind.Absolute));
         _tray = new TaskbarIcon
         {
-            IconSource = new System.Windows.Media.Imaging.BitmapImage(
-                new Uri("pack://application:,,,/Resources/tray.ico", UriKind.Absolute)),
+            IconSource = _mapper!.Enabled ? _enabledTrayIcon : _disabledTrayIcon,
             ToolTipText = "Pad2Mouse",
         };
         _tray.TrayMouseDoubleClick += (_, _) => ShowMainWindow();
@@ -99,6 +104,12 @@ public partial class App : Application
 
         _tray.ContextMenu = menu;
         UpdateTrayMenuLabels();
+    }
+
+    private void UpdateTrayIcon(bool enabled)
+    {
+        if (_tray == null) return;
+        _tray.IconSource = enabled ? _enabledTrayIcon : _disabledTrayIcon;
     }
 
     private void UpdateTrayMenuLabels()
@@ -145,6 +156,7 @@ public partial class App : Application
     {
         if (_toggleMenuItem != null)
             _toggleMenuItem.IsChecked = enabled;
+        UpdateTrayIcon(enabled);
         if (_config != null) _config.Enabled = enabled;
         SaveConfig();
 
