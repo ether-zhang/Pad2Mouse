@@ -15,37 +15,41 @@
         <Style x:Key="MappingListButtonStyle" TargetType="ToggleButton">
             <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushNormal}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="8,6"/>
-            <Setter Property="MinWidth" Value="54"/>
-            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinWidth" Value="40"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="ModeBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
+                        <Border>
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               Margin="{TemplateBinding Padding}"/>
                         </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ModeBorder" Property="Background" Value="{DynamicResource ControlHover}"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="ModeBorder" Property="Background" Value="{DynamicResource ControlPressed}"/>
-                                <Setter TargetName="ModeBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style x:Key="MappingCalloutLineStyle" TargetType="Polyline">
+            <Setter Property="Stroke" Value="{DynamicResource MutedForegroundBrush}"/>
+            <Setter Property="StrokeThickness" Value="1.5"/>
+            <Setter Property="StrokeLineJoin" Value="Round"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+        </Style>
+
+        <Style x:Key="MappingCalloutAnchorStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="6"/>
+            <Setter Property="Height" Value="6"/>
+            <Setter Property="Fill" Value="{DynamicResource PanelBackground}"/>
+            <Setter Property="Stroke" Value="{DynamicResource ForegroundBrush}"/>
+            <Setter Property="StrokeThickness" Value="1.5"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
         </Style>
 
         <Style x:Key="ControllerHotspotStyle" TargetType="ToggleButton">
@@ -213,159 +217,242 @@
 
                 <Separator Margin="0,12,0,12"/>
 
-                <!-- Controller-first mapping editor. The Viewbox scales image and
-                     hotspots together, keeping hit targets aligned at any window size. -->
+                <!-- Diagram-style mapping editor: controller in the center, with
+                     physical callout lines leading to editable mappings. -->
                 <Border Background="{DynamicResource PanelBackground}" CornerRadius="10" Padding="12" Margin="0,0,0,12">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="420"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <Grid Margin="2,0,2,10">
-                            <StackPanel>
-                                <TextBlock Text="{DynamicResource Section.Mapping}" FontSize="16" FontWeight="SemiBold"/>
-                                <TextBlock Text="{DynamicResource Mapping.SelectHint}"
-                                           Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,0"/>
-                            </StackPanel>
-                        </Grid>
+                        <StackPanel Margin="2,0,2,8">
+                            <TextBlock Text="{DynamicResource Section.Mapping}" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock Text="{DynamicResource Mapping.SelectHint}"
+                                       Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,0"/>
+                        </StackPanel>
 
-                        <Grid Grid.Row="1">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="310"/>
-                            </Grid.ColumnDefinitions>
+                        <Grid Grid.Row="1" ClipToBounds="True">
+                            <Viewbox Stretch="Uniform">
+                                <Canvas Width="1120" Height="500">
+                                <Canvas x:Name="PsControllerView" Width="1120" Height="500">
+                                    <Viewbox Canvas.Left="250" Canvas.Top="50" Width="620" Height="413" Stretch="Fill">
+                                        <Grid Width="768" Height="512">
+                                            <Image Source="pack://application:,,,/Resources/outline_1.png" Stretch="Fill"/>
+                                            <Canvas x:Name="PsHotspotCanvas">
+                                                <ToggleButton Content="L2" Tag="L2" Width="88" Height="40" Canvas.Left="125" Canvas.Top="47"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="R2" Tag="R2" Width="88" Height="40" Canvas.Left="556" Canvas.Top="47"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="L3" Tag="L3" Width="54" Height="54" Padding="0,0,0,28" Canvas.Left="247" Canvas.Top="248"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="R3" Tag="R3" Width="54" Height="54" Padding="0,0,0,28" Canvas.Left="466" Canvas.Top="248"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="△" Tag="Triangle" Width="38" Height="38" FontSize="15" Canvas.Left="571" Canvas.Top="126"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Tag="Square" Width="38" Height="38" Canvas.Left="523" Canvas.Top="172"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick">
+                                                    <Rectangle Width="11" Height="11" Stroke="#26343D" StrokeThickness="2" SnapsToDevicePixels="True"/>
+                                                </ToggleButton>
+                                                <ToggleButton Tag="Circle" Width="38" Height="38" Canvas.Left="618" Canvas.Top="172"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick">
+                                                    <Ellipse Width="12" Height="12" Stroke="#26343D" StrokeThickness="2"/>
+                                                </ToggleButton>
+                                                <ToggleButton Content="✕" Tag="Cross" Width="38" Height="38" FontSize="15" Canvas.Left="571" Canvas.Top="216"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            </Canvas>
+                                        </Grid>
+                                    </Viewbox>
 
-                            <Grid MinHeight="350" Margin="0,0,14,0" ClipToBounds="True">
-                                <Viewbox x:Name="PsControllerView" Stretch="Uniform">
-                                    <Grid Width="768" Height="512">
-                                        <Image Source="pack://application:,,,/Resources/outline_1.png" Stretch="Fill"/>
-                                        <Canvas x:Name="PsHotspotCanvas">
-                                            <ToggleButton Content="L2" Tag="L2" Width="88" Height="40" Canvas.Left="125" Canvas.Top="47"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="R2" Tag="R2" Width="88" Height="40" Canvas.Left="556" Canvas.Top="47"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="L3" Tag="L3" Width="54" Height="54" Padding="0,0,0,28" Canvas.Left="247" Canvas.Top="248"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="R3" Tag="R3" Width="54" Height="54" Padding="0,0,0,28" Canvas.Left="466" Canvas.Top="248"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="△" Tag="Triangle" Width="38" Height="38" FontSize="15" Canvas.Left="571" Canvas.Top="126"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Tag="Square" Width="38" Height="38" Canvas.Left="523" Canvas.Top="172"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick">
-                                                <Rectangle Width="11" Height="11" Stroke="#26343D" StrokeThickness="2" SnapsToDevicePixels="True"/>
-                                            </ToggleButton>
-                                            <ToggleButton Tag="Circle" Width="38" Height="38" Canvas.Left="618" Canvas.Top="172"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick">
-                                                <Ellipse Width="12" Height="12" Stroke="#26343D" StrokeThickness="2"/>
-                                            </ToggleButton>
-                                            <ToggleButton Content="✕" Tag="Cross" Width="38" Height="38" FontSize="15" Canvas.Left="571" Canvas.Top="216"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                        </Canvas>
-                                    </Grid>
-                                </Viewbox>
+                                    <Polyline Points="220,104 350,104 386,104" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="220,206 348,206" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="220,272 430,272 471,272" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="220,427 450,427 450,294 471,294" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="734,104 860,104" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="781,204 825,204 825,253 850,253" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="860,142 850,142 850,365 860,365" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="648,272 790,272 790,434 860,434" Style="{StaticResource MappingCalloutLineStyle}"/>
 
-                                <Viewbox x:Name="XboxControllerView" Stretch="Uniform" Visibility="Collapsed">
-                                    <Grid Width="768" Height="512">
-                                        <Image Source="pack://application:,,,/Resources/outline_2.png" Stretch="Fill"/>
-                                        <Canvas x:Name="XboxHotspotCanvas">
-                                            <ToggleButton Content="LT" Tag="L2" Width="88" Height="40" Canvas.Left="182" Canvas.Top="47"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="RT" Tag="R2" Width="88" Height="40" Canvas.Left="481" Canvas.Top="47"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="LSB" Tag="L3" Width="58" Height="58" Padding="0,0,0,28" Canvas.Left="211" Canvas.Top="163"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="RSB" Tag="R3" Width="58" Height="58" Padding="0,0,0,28" Canvas.Left="436" Canvas.Top="243"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="Y" Tag="Triangle" Width="38" Height="38" FontSize="15" Canvas.Left="496" Canvas.Top="139"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="X" Tag="Square" Width="38" Height="38" FontSize="15" Canvas.Left="459" Canvas.Top="171"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="B" Tag="Circle" Width="38" Height="38" FontSize="15" Canvas.Left="533" Canvas.Top="171"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                            <ToggleButton Content="A" Tag="Cross" Width="38" Height="38" FontSize="15" Canvas.Left="496" Canvas.Top="205"
-                                                          Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
-                                        </Canvas>
-                                    </Grid>
-                                </Viewbox>
-                            </Grid>
+                                    <Ellipse Canvas.Left="383" Canvas.Top="101" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="345" Canvas.Top="203" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="468" Canvas.Top="269" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="468" Canvas.Top="291" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="731" Canvas.Top="101" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="778" Canvas.Top="201" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="645" Canvas.Top="269" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                </Canvas>
 
-                            <Border Grid.Column="1" Background="{DynamicResource ControlBackground}"
-                                    BorderBrush="{DynamicResource BorderBrushSubtle}" BorderThickness="1"
-                                    CornerRadius="8" Padding="14">
-                                <StackPanel>
-                                    <TextBlock Text="{DynamicResource Mapping.Configurable}" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{DynamicResource Mapping.ListHint}"
-                                               Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,8"/>
+                                <Canvas x:Name="XboxControllerView" Width="1120" Height="500" Visibility="Collapsed">
+                                    <Viewbox Canvas.Left="250" Canvas.Top="50" Width="620" Height="413" Stretch="Fill">
+                                        <Grid Width="768" Height="512">
+                                            <Image Source="pack://application:,,,/Resources/outline_2.png" Stretch="Fill"/>
+                                            <Canvas x:Name="XboxHotspotCanvas">
+                                                <ToggleButton Content="LT" Tag="L2" Width="88" Height="40" Canvas.Left="182" Canvas.Top="47"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="RT" Tag="R2" Width="88" Height="40" Canvas.Left="481" Canvas.Top="47"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="LSB" Tag="L3" Width="58" Height="58" Padding="0,0,0,28" Canvas.Left="211" Canvas.Top="163"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="RSB" Tag="R3" Width="58" Height="58" Padding="0,0,0,28" Canvas.Left="436" Canvas.Top="243"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="Y" Tag="Triangle" Width="38" Height="38" FontSize="15" Canvas.Left="496" Canvas.Top="139"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="X" Tag="Square" Width="38" Height="38" FontSize="15" Canvas.Left="459" Canvas.Top="171"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="B" Tag="Circle" Width="38" Height="38" FontSize="15" Canvas.Left="533" Canvas.Top="171"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="A" Tag="Cross" Width="38" Height="38" FontSize="15" Canvas.Left="496" Canvas.Top="205"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                            </Canvas>
+                                        </Grid>
+                                    </Viewbox>
 
-                                    <Grid Margin="0,0,0,5">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="60"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ToggleButton x:Name="MapL2Button" Tag="L2" Content="L2" Style="{StaticResource MappingListButtonStyle}" Click="OnMappingListButtonClick"/>
-                                        <ComboBox x:Name="MapL2Combo" Tag="L2" Grid.Column="1" Margin="8,0,0,0" Padding="5"
-                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
-                                    </Grid>
-                                    <Grid Margin="0,0,0,5">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="60"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ToggleButton x:Name="MapR2Button" Tag="R2" Content="R2" Style="{StaticResource MappingListButtonStyle}" Click="OnMappingListButtonClick"/>
-                                        <ComboBox x:Name="MapR2Combo" Tag="R2" Grid.Column="1" Margin="8,0,0,0" Padding="5"
-                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
-                                    </Grid>
-                                    <Grid Margin="0,0,0,5">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="60"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ToggleButton x:Name="MapCrossButton" Tag="Cross" Content="✕" Style="{StaticResource MappingListButtonStyle}" Click="OnMappingListButtonClick"/>
-                                        <ComboBox x:Name="MapCrossCombo" Tag="Cross" Grid.Column="1" Margin="8,0,0,0" Padding="5"
-                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
-                                    </Grid>
-                                    <Grid Margin="0,0,0,5">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="60"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ToggleButton x:Name="MapCircleButton" Tag="Circle" Content="○" Style="{StaticResource MappingListButtonStyle}" Click="OnMappingListButtonClick"/>
-                                        <ComboBox x:Name="MapCircleCombo" Tag="Circle" Grid.Column="1" Margin="8,0,0,0" Padding="5"
-                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
-                                    </Grid>
-                                    <Grid Margin="0,0,0,5">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="60"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ToggleButton x:Name="MapSquareButton" Tag="Square" Content="□" Style="{StaticResource MappingListButtonStyle}" Click="OnMappingListButtonClick"/>
-                                        <ComboBox x:Name="MapSquareCombo" Tag="Square" Grid.Column="1" Margin="8,0,0,0" Padding="5"
-                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
-                                    </Grid>
-                                    <Grid Margin="0,0,0,5">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="60"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ToggleButton x:Name="MapTriangleButton" Tag="Triangle" Content="△" Style="{StaticResource MappingListButtonStyle}" Click="OnMappingListButtonClick"/>
-                                        <ComboBox x:Name="MapTriangleCombo" Tag="Triangle" Grid.Column="1" Margin="8,0,0,0" Padding="5"
-                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
-                                    </Grid>
-                                    <Grid Margin="0,0,0,5">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="60"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ToggleButton x:Name="MapL3Button" Tag="L3" Content="L3" Style="{StaticResource MappingListButtonStyle}" Click="OnMappingListButtonClick"/>
-                                        <ComboBox x:Name="MapL3Combo" Tag="L3" Grid.Column="1" Margin="8,0,0,0" Padding="5"
-                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
-                                    </Grid>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="60"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <ToggleButton x:Name="MapR3Button" Tag="R3" Content="R3" Style="{StaticResource MappingListButtonStyle}" Click="OnMappingListButtonClick"/>
-                                        <ComboBox x:Name="MapR3Combo" Tag="R3" Grid.Column="1" Margin="8,0,0,0" Padding="5"
-                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
-                                    </Grid>
+                                    <Polyline Points="220,104 380,104 433,104" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="220,272 452,270" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="220,206 444,205" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="220,427 420,427 420,225 444,225" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="674,104 860,104" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="711,203 825,203 825,253 850,253" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="860,142 850,142 850,365 860,365" Style="{StaticResource MappingCalloutLineStyle}"/>
+                                    <Polyline Points="625,270 790,270 790,434 860,434" Style="{StaticResource MappingCalloutLineStyle}"/>
 
-                                    <Separator Margin="0,11,0,9"/>
-                                    <TextBlock Text="{DynamicResource Mapping.PresetCombos}" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                                    <Grid>
+                                    <Ellipse Canvas.Left="430" Canvas.Top="101" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="449" Canvas.Top="267" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="441" Canvas.Top="202" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="441" Canvas.Top="222" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="671" Canvas.Top="101" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="708" Canvas.Top="200" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                    <Ellipse Canvas.Left="622" Canvas.Top="267" Style="{StaticResource MappingCalloutAnchorStyle}"/>
+                                </Canvas>
+
+                                    <Grid Canvas.Left="0" Canvas.Top="79" Width="240" Height="50">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="172"/><ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="40"/><ColumnDefinition Width="20"/>
                                         </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition/><RowDefinition/><RowDefinition/>
-                                        </Grid.RowDefinitions>
-                                        <TextBlock x:Name="PresetToggleComboLabel" Grid.Row="0" Text="L3 + R3" Margin="0,3,12,3"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{DynamicResource Mapping.ToggleApp}" TextWrapping="Wrap" Margin="0,3"/>
-                                        <TextBlock x:Name="PresetKeyboardComboLabel" Grid.Row="1" Text="L1 + R1" Margin="0,3,12,3"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{DynamicResource Mapping.OnScreenKeyboard}" TextWrapping="Wrap" Margin="0,3"/>
-                                        <TextBlock x:Name="PresetCenterComboLabel" Grid.Row="2" Text="Create + Options" Margin="0,3,12,3"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{DynamicResource Mapping.CenterCursor}" TextWrapping="Wrap" Margin="0,3"/>
+                                        <ComboBox x:Name="MapL2Combo" Tag="L2" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                        <ToggleButton x:Name="MapL2Button" Grid.Column="2" Tag="L2" Content="L2"
+                                                      Style="{StaticResource MappingListButtonStyle}"/>
                                     </Grid>
-                                </StackPanel>
-                            </Border>
+
+                                    <Grid x:Name="DPadCallout" Canvas.Left="0" Canvas.Top="181" Width="220" Height="50">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="172"/><ColumnDefinition Width="8"/><ColumnDefinition Width="40"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource Mapping.DPad}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{DynamicResource Mapping.ArrowKeys}" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="＋" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <Grid x:Name="L3Callout" Canvas.Left="0" Canvas.Top="247" Width="240" Height="50">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="172"/><ColumnDefinition Width="8"/>
+                                            <ColumnDefinition Width="40"/><ColumnDefinition Width="20"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox x:Name="MapL3Combo" Tag="L3" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                        <ToggleButton x:Name="MapL3Button" Grid.Column="2" Tag="L3" Content="L3"
+                                                      Style="{StaticResource MappingListButtonStyle}"/>
+                                    </Grid>
+
+                                    <Grid Canvas.Left="0" Canvas.Top="402" Width="220" Height="50">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="172"/><ColumnDefinition Width="8"/><ColumnDefinition Width="40"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource Mapping.LeftStick}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{DynamicResource Mapping.MouseMove}" Foreground="{DynamicResource MutedForegroundBrush}"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="LS" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <Grid Canvas.Left="860" Canvas.Top="79" Width="250" Height="50">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40"/><ColumnDefinition Width="8"/><ColumnDefinition Width="202"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton x:Name="MapR2Button" Tag="R2" Content="R2"
+                                                      Style="{StaticResource MappingListButtonStyle}"/>
+                                        <ComboBox x:Name="MapR2Combo" Tag="R2" Grid.Column="2" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                    </Grid>
+                                    <StackPanel Canvas.Left="860" Canvas.Top="142" Width="250">
+                                    <Grid Height="50" Margin="0,0,0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40"/><ColumnDefinition Width="8"/><ColumnDefinition Width="202"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton x:Name="MapTriangleButton" Tag="Triangle" Content="△"
+                                                      Style="{StaticResource MappingListButtonStyle}"/>
+                                        <ComboBox x:Name="MapTriangleCombo" Tag="Triangle" Grid.Column="2" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                    </Grid>
+                                    <Grid Height="50" Margin="0,0,0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40"/><ColumnDefinition Width="8"/><ColumnDefinition Width="202"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton x:Name="MapSquareButton" Tag="Square" Content="□"
+                                                      Style="{StaticResource MappingListButtonStyle}"/>
+                                        <ComboBox x:Name="MapSquareCombo" Tag="Square" Grid.Column="2" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                    </Grid>
+                                    <Grid Height="50" Margin="0,0,0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40"/><ColumnDefinition Width="8"/><ColumnDefinition Width="202"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton x:Name="MapCircleButton" Tag="Circle" Content="○"
+                                                      Style="{StaticResource MappingListButtonStyle}"/>
+                                        <ComboBox x:Name="MapCircleCombo" Tag="Circle" Grid.Column="2" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                    </Grid>
+                                    <Grid Height="50">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40"/><ColumnDefinition Width="8"/><ColumnDefinition Width="202"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton x:Name="MapCrossButton" Tag="Cross" Content="✕"
+                                                      Style="{StaticResource MappingListButtonStyle}"/>
+                                        <ComboBox x:Name="MapCrossCombo" Tag="Cross" Grid.Column="2" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                    </Grid>
+                                    </StackPanel>
+                                    <Grid Canvas.Left="860" Canvas.Top="409" Width="250" Height="50">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40"/><ColumnDefinition Width="8"/><ColumnDefinition Width="202"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton x:Name="MapR3Button" Tag="R3" Content="R3"
+                                                      Style="{StaticResource MappingListButtonStyle}"/>
+                                        <ComboBox x:Name="MapR3Combo" Tag="R3" Grid.Column="2" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                    </Grid>
+                                </Canvas>
+                            </Viewbox>
                         </Grid>
+
+                        <Border Grid.Row="2" Background="{DynamicResource ControlBackground}"
+                                BorderBrush="{DynamicResource BorderBrushSubtle}" BorderThickness="1"
+                                CornerRadius="8" Padding="10" Margin="0,8,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Mapping.PresetCombos}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                <UniformGrid Columns="3">
+                                    <Grid Margin="0,0,12,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="PresetToggleComboLabel" Text="L3 + R3" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                        <TextBlock Grid.Column="1" Text="{DynamicResource Mapping.ToggleApp}" Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap"/>
+                                    </Grid>
+                                    <Grid Margin="0,0,12,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="PresetKeyboardComboLabel" Text="L1 + R1" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                        <TextBlock Grid.Column="1" Text="{DynamicResource Mapping.OnScreenKeyboard}" Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="PresetCenterComboLabel" Text="Create + Options" FontWeight="SemiBold" Margin="0,0,10,0"/>
+                                        <TextBlock Grid.Column="1" Text="{DynamicResource Mapping.CenterCursor}" Foreground="{DynamicResource MutedForegroundBrush}" TextWrapping="Wrap"/>
+                                    </Grid>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
                     </Grid>
                 </Border>
 

@@ -107,6 +107,8 @@ public partial class MainWindow : Window
         _showXboxController = showXbox;
         PsControllerView.Visibility = showXbox ? Visibility.Collapsed : Visibility.Visible;
         XboxControllerView.Visibility = showXbox ? Visibility.Visible : Visibility.Collapsed;
+        Canvas.SetTop(DPadCallout, showXbox ? 247 : 181);
+        Canvas.SetTop(L3Callout, showXbox ? 181 : 247);
         PresetToggleComboLabel.Text = showXbox ? "LSB + RSB" : "L3 + R3";
         PresetKeyboardComboLabel.Text = showXbox ? "LB + RB" : "L1 + R1";
         PresetCenterComboLabel.Text = showXbox ? "View + Menu" : "Create + Options";
@@ -402,12 +404,6 @@ public partial class MainWindow : Window
     }
 
     private void OnMappingHotspotClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is ToggleButton { Tag: string slot })
-            SelectMappingSlot(slot, openDropDown: true);
-    }
-
-    private void OnMappingListButtonClick(object sender, RoutedEventArgs e)
     {
         if (sender is ToggleButton { Tag: string slot })
             SelectMappingSlot(slot, openDropDown: true);
