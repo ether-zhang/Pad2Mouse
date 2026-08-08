@@ -8,7 +8,7 @@ namespace DS2Mouse.Services;
 /// injects from gamepad input.
 ///
 /// Win11 translates gamepad D-pad / sticks / face buttons into virtual key
-/// presses (arrows, Tab, Enter, Esc, Space) and feeds them into the global
+/// presses (arrows, Tab, Esc, etc.) and feeds them into the global
 /// input queue marked with the LLKHF_INJECTED flag. A WH_KEYBOARD_LL hook
 /// sees these before XAML focus navigation does, so dropping them stops the
 /// double-input behavior.
@@ -21,7 +21,7 @@ namespace DS2Mouse.Services;
 /// The injected flag alone can't tell a Win11 gamepad-nav key from a key
 /// injected by remote-desktop / game-streaming hosts (Sunshine, Parsec, RDP)
 /// or automation tools — they all use SendInput too. Dropping their nav keys
-/// would make a streamed keyboard's arrows / Tab / Enter / Esc stop working
+/// would make a streamed keyboard's arrows / Tab / Esc stop working
 /// on the host. The distinguishing fact is that Win11's nav keys are always a
 /// consequence of gamepad input we also observe, so we only suppress within a
 /// short window after the controller last had genuine activity
@@ -80,7 +80,7 @@ public static class ShellInputSuppressor
             // navigation, and only when injected by something other than us,
             // and only while the controller is actually being used. The last
             // gate is what lets a streamed keyboard (Sunshine / Parsec / RDP)
-            // or automation tools keep their arrows / Tab / Enter / Esc — those
+            // or automation tools keep their arrows / Tab / Esc — those
             // arrive with no gamepad activity, so the window is closed. It also
             // leaves browser-back/forward, media keys, and IME keys untouched.
             long sinceActivity = Environment.TickCount64 - Volatile.Read(ref _lastGamepadActivityMs);
@@ -98,9 +98,10 @@ public static class ShellInputSuppressor
     private static bool IsNavigationKey(uint vk) => vk switch
     {
         0x09 => true, // VK_TAB
-        0x0D => true, // VK_RETURN
         0x1B => true, // VK_ESCAPE
-        0x20 => true, // VK_SPACE
+        // Enter and Space are intentionally not suppressed. Some keyboard
+        // drivers and remote-input tools mark ordinary keystrokes as injected;
+        // swallowing these two breaks normal typing while mapping is enabled.
         0x21 => true, // VK_PRIOR (Page Up)
         0x22 => true, // VK_NEXT (Page Down)
         0x23 => true, // VK_END

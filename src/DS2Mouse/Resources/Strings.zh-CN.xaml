@@ -67,6 +67,14 @@
     <s:String x:Key="Mapping.Configurable">可配置按键</s:String>
     <s:String x:Key="Mapping.ListHint">选择按键并修改映射</s:String>
     <s:String x:Key="Mapping.PresetCombos">预设组合键</s:String>
+    <s:String x:Key="Mapping.TouchpadZones">触摸板分区</s:String>
+    <s:String x:Key="Mapping.TouchpadHint">单指滑动移动鼠标（跟随左摇杆灵敏度）；按下时按触点位置触发左、中或右区映射</s:String>
+    <s:String x:Key="Mapping.TouchpadLeft">触摸板左区</s:String>
+    <s:String x:Key="Mapping.TouchpadCenter">触摸板中区</s:String>
+    <s:String x:Key="Mapping.TouchpadRight">触摸板右区</s:String>
+    <s:String x:Key="Mapping.TouchpadLeftShort">左</s:String>
+    <s:String x:Key="Mapping.TouchpadCenterShort">中</s:String>
+    <s:String x:Key="Mapping.TouchpadRightShort">右</s:String>
 
     <!-- Action options for configurable mapping dropdowns. -->
     <s:String x:Key="Mapping.None">无</s:String>

@@ -20,10 +20,11 @@
 
 ### 指针与滚动
 - **左摇杆 → 鼠标移动**：径向死区 + 指数曲线 + 时间线性加速，按住越久越快，回到死区即归零。
+- **PS 触摸板 → 鼠标移动**：单指相对移动并跟随左摇杆灵敏度设置；按下时按触点位置区分左、中、右三个可配置区域。
 - **右摇杆 → 滚轮**：垂直滚动，速度可调，亚像素累加避免抖动。
 
 ### 按键映射
-默认映射如下，**八个按键均可在主界面下拉自由修改**（也可绑定为某个键盘按键的「按住式」映射）：
+默认映射如下，**八个通用按键和 PS 触摸板三区均可在主界面下拉自由修改**（也可绑定为某个键盘按键的「按住式」映射）：
 
 | 按键 (PS / Xbox) | 默认动作 |
 | --- | --- |
@@ -35,6 +36,9 @@
 | △ Triangle / Y | Enter |
 | L3 / LSB | Tab |
 | R3 / RSB | 鼠标中键单击 |
+| 触摸板左区（仅 PS） | 鼠标左键单击 |
+| 触摸板中区（仅 PS） | 鼠标中键单击 |
+| 触摸板右区（仅 PS） | 鼠标右键单击 |
 | 方向键 / D-Pad | 上下左右方向键（固定） |
 
 > 鼠标左键按住支持拖拽；R2 与 ✕ 任一按下都算左键按住，松开任一不影响另一者。
@@ -130,7 +134,10 @@ dotnet publish src/DS2Mouse/DS2Mouse.csproj `
     "Square": "MiddleClick",
     "Triangle": "Enter",
     "L3": "Tab",
-    "R3": "MiddleClick"
+    "R3": "MiddleClick",
+    "TouchpadLeft": "LeftClick",
+    "TouchpadCenter": "MiddleClick",
+    "TouchpadRight": "RightClick"
   },
   "FullscreenWhitelist": ["chrome", "mpv", "vlc"]
 }

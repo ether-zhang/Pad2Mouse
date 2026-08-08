@@ -20,10 +20,11 @@ Great for browsing from the couch, watching videos, driving an HTPC, or operatin
 
 ### Pointer & scrolling
 - **Left stick → mouse movement**: radial deadzone + exponential curve + time-based linear acceleration. The longer you hold, the faster it tracks; return to the deadzone and it stops instantly.
+- **PS touchpad → mouse movement**: one-finger relative movement using the left-stick sensitivity setting; pressing triggers a configurable left, center, or right zone based on the contact position.
 - **Right stick → scroll wheel**: vertical scrolling with adjustable speed and sub-pixel accumulation to avoid jitter.
 
 ### Button mapping
-Defaults below — **all eight buttons are reassignable from the main window** (and can also be bound to a keyboard key as a "hold" mapping):
+Defaults below — **all eight common buttons and the three PS touchpad zones are reassignable from the main window** (and can also be bound to a keyboard key as a "hold" mapping):
 
 | Button (PS / Xbox) | Default action |
 | --- | --- |
@@ -35,6 +36,9 @@ Defaults below — **all eight buttons are reassignable from the main window** (
 | △ Triangle / Y | Enter |
 | L3 / LSB | Tab |
 | R3 / RSB | Mouse middle click |
+| Touchpad left (PS only) | Mouse left click |
+| Touchpad center (PS only) | Mouse middle click |
+| Touchpad right (PS only) | Mouse right click |
 | D-Pad | Arrow keys (fixed) |
 
 > Left-hold supports dragging; R2 and ✕ both trigger left-hold, and releasing one doesn't affect the other.
@@ -131,7 +135,10 @@ Output: `src/DS2Mouse/bin/Release/net9.0-windows/win-x64/publish/Pad2Mouse.exe`.
     "Square": "MiddleClick",
     "Triangle": "Enter",
     "L3": "Tab",
-    "R3": "MiddleClick"
+    "R3": "MiddleClick",
+    "TouchpadLeft": "LeftClick",
+    "TouchpadCenter": "MiddleClick",
+    "TouchpadRight": "RightClick"
   },
   "FullscreenWhitelist": ["chrome", "mpv", "vlc"]
 }

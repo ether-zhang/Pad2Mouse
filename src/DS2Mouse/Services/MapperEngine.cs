@@ -10,6 +10,9 @@ namespace DS2Mouse.Services;
 public sealed class MapperEngine : IDisposable
 {
     private const int TickIntervalMs = 8; // 125 Hz
+    private const float TouchpadSensitivityDivisor = 60f;
+    private const int TouchpadMaxDeltaPerTick = 400;
+    private const int TouchpadWidth = 1920;
 
     // Virtual-Key codes used by the default mapping.
     private const ushort VK_BACK    = 0x08;
@@ -34,11 +37,28 @@ public sealed class MapperEngine : IDisposable
     private bool _l2Prev;
     private bool _circlePrev, _squarePrev, _trianglePrev;
     private bool _l3Prev, _r3Prev;
+    private bool _touchLeftPrev, _touchCenterPrev, _touchRightPrev;
     private bool _l3r3ComboActive;
+    private TouchpadRegion _touchpadClickRegion;
+    private bool _touchMoveActive;
+    private byte _touchMoveId;
+    private int _touchMoveSlot;
+    private ushort _touchMoveX, _touchMoveY;
+    private float _touchMoveAccumX, _touchMoveAccumY;
+    private int _lastTouchX = TouchpadWidth / 2;
+    private long _lastTouchSeenMs;
     private float _scrollAccum;
     private long _lastTickStamp;
     private long _stickHoldStartMs;  // 0 = left stick is in deadzone
     private long _scrollHoldStartMs; // 0 = right stick is in deadzone
+
+    private enum TouchpadRegion
+    {
+        None,
+        Left,
+        Center,
+        Right,
+    }
 
     public AppConfig Config { get; set; }
 
@@ -85,7 +105,12 @@ public sealed class MapperEngine : IDisposable
     private void Tick()
     {
         var snapshot = _reader.LatestState;
-        if (snapshot is null) return;
+        if (snapshot is null)
+        {
+            FlushHeldStates();
+            _prevButtons = DualSenseButton.None;
+            return;
+        }
         var s = snapshot.Value;
 
         // Tell the shell-nav suppressor the pad is in use so it only drops
@@ -114,12 +139,14 @@ public sealed class MapperEngine : IDisposable
             _scrollAccum = 0;
             _stickHoldStartMs = 0;
             _scrollHoldStartMs = 0;
+            ResetTouchpadMotion();
             _lastTickStamp = Environment.TickCount64;
             return;
         }
 
         ProcessLeftStick(s);
         ProcessRightStick(s);
+        ProcessTouchpad(s);
         ProcessTriggers(s);
         ProcessButtons(s, newlyPressed);
         ProcessSystemShortcuts(s);
@@ -137,7 +164,116 @@ public sealed class MapperEngine : IDisposable
         const float Thr = 0.3f;
         return s.Buttons != DualSenseButton.None
             || MathF.Abs(s.LeftStickX)  > Thr || MathF.Abs(s.LeftStickY)  > Thr
-            || MathF.Abs(s.RightStickX) > Thr || MathF.Abs(s.RightStickY) > Thr;
+            || MathF.Abs(s.RightStickX) > Thr || MathF.Abs(s.RightStickY) > Thr
+            || s.Touch1.Active || s.Touch2.Active;
+    }
+
+    private void ProcessTouchpad(in DualSenseState s)
+    {
+        if (!s.HasTouchpadData)
+        {
+            ResetTouchpadMotion();
+        }
+        else
+        {
+            int activeCount = (s.Touch1.Active ? 1 : 0) + (s.Touch2.Active ? 1 : 0);
+            if (activeCount > 0)
+            {
+                _lastTouchX = activeCount == 2
+                    ? (s.Touch1.X + s.Touch2.X) / 2
+                    : s.Touch1.Active ? s.Touch1.X : s.Touch2.X;
+                _lastTouchSeenMs = Environment.TickCount64;
+            }
+
+            if (activeCount == 1)
+            {
+                var touch = s.Touch1.Active ? s.Touch1 : s.Touch2;
+                int slot = s.Touch1.Active ? 1 : 2;
+                MovePointerFromTouch(touch, slot);
+            }
+            else
+            {
+                // Two contacts are reserved for gestures; do not let a slot
+                // change or a second finger cause a pointer jump.
+                ResetTouchpadMotion();
+            }
+        }
+
+        bool pressed = (s.Buttons & DualSenseButton.Touchpad) != 0;
+        if (pressed && _touchpadClickRegion == TouchpadRegion.None)
+            _touchpadClickRegion = ResolveTouchpadRegion();
+
+        var mappings = Config.Mappings;
+        DispatchInputEdge(mappings.TouchpadLeft,
+            pressed && _touchpadClickRegion == TouchpadRegion.Left,
+            ref _touchLeftPrev);
+        DispatchInputEdge(mappings.TouchpadCenter,
+            pressed && _touchpadClickRegion == TouchpadRegion.Center,
+            ref _touchCenterPrev);
+        DispatchInputEdge(mappings.TouchpadRight,
+            pressed && _touchpadClickRegion == TouchpadRegion.Right,
+            ref _touchRightPrev);
+
+        if (!pressed) _touchpadClickRegion = TouchpadRegion.None;
+    }
+
+    private void MovePointerFromTouch(in TouchContact touch, int slot)
+    {
+        if (!_touchMoveActive || _touchMoveId != touch.Id || _touchMoveSlot != slot)
+        {
+            _touchMoveActive = true;
+            _touchMoveId = touch.Id;
+            _touchMoveSlot = slot;
+            _touchMoveX = touch.X;
+            _touchMoveY = touch.Y;
+            _touchMoveAccumX = 0;
+            _touchMoveAccumY = 0;
+            return;
+        }
+
+        int rawDx = touch.X - _touchMoveX;
+        int rawDy = touch.Y - _touchMoveY;
+        _touchMoveX = touch.X;
+        _touchMoveY = touch.Y;
+
+        if (Math.Abs(rawDx) > TouchpadMaxDeltaPerTick || Math.Abs(rawDy) > TouchpadMaxDeltaPerTick)
+        {
+            _touchMoveAccumX = 0;
+            _touchMoveAccumY = 0;
+            return;
+        }
+
+        // Fractional accumulation damps one-unit sensor jitter while retaining
+        // deliberate slow movement instead of discarding small deltas.
+        float pointerScale = Config.LeftStick.Sensitivity / TouchpadSensitivityDivisor;
+        _touchMoveAccumX += rawDx * pointerScale;
+        _touchMoveAccumY += rawDy * pointerScale;
+        int dx = (int)MathF.Truncate(_touchMoveAccumX);
+        int dy = (int)MathF.Truncate(_touchMoveAccumY);
+        if (dx == 0 && dy == 0) return;
+
+        InputSimulator.MoveRelative(dx, dy);
+        _touchMoveAccumX -= dx;
+        _touchMoveAccumY -= dy;
+    }
+
+    private TouchpadRegion ResolveTouchpadRegion()
+    {
+        // A mechanical click can arrive one frame after the contact disappears.
+        // Keep the last location briefly; an unlocated click falls back to center.
+        int x = Environment.TickCount64 - _lastTouchSeenMs <= 150
+            ? _lastTouchX
+            : TouchpadWidth / 2;
+        if (x < TouchpadWidth / 3) return TouchpadRegion.Left;
+        if (x < TouchpadWidth * 2 / 3) return TouchpadRegion.Center;
+        return TouchpadRegion.Right;
+    }
+
+    private void ResetTouchpadMotion()
+    {
+        _touchMoveActive = false;
+        _touchMoveAccumX = 0;
+        _touchMoveAccumY = 0;
     }
 
     private void ProcessLeftStick(DualSenseState s)
@@ -360,7 +496,14 @@ public sealed class MapperEngine : IDisposable
         if (_trianglePrev) ApplyUp(m.Triangle);
         if (_l3Prev)       ApplyUp(m.L3);
         if (_r3Prev)       ApplyUp(m.R3);
+        if (_touchLeftPrev)   ApplyUp(m.TouchpadLeft);
+        if (_touchCenterPrev) ApplyUp(m.TouchpadCenter);
+        if (_touchRightPrev)  ApplyUp(m.TouchpadRight);
         _r2Prev = _crossPrev = _l2Prev = _circlePrev = _squarePrev = _trianglePrev = _l3Prev = _r3Prev = false;
+        _touchLeftPrev = _touchCenterPrev = _touchRightPrev = false;
+        _touchpadClickRegion = TouchpadRegion.None;
+        _lastTouchSeenMs = 0;
+        ResetTouchpadMotion();
 
         // Release D-Pad-mapped arrows
         if ((_prevButtons & DualSenseButton.DPadUp)    != 0) InputSimulator.KeyUp(VK_UP);

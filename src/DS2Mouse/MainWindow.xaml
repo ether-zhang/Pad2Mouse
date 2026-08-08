@@ -225,6 +225,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="420"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <StackPanel Margin="2,0,2,8">
                             <TextBlock Text="{DynamicResource Section.Mapping}" FontSize="16" FontWeight="SemiBold"/>
@@ -259,6 +260,15 @@
                                                     <Ellipse Width="12" Height="12" Stroke="#26343D" StrokeThickness="2"/>
                                                 </ToggleButton>
                                                 <ToggleButton Content="✕" Tag="Cross" Width="38" Height="38" FontSize="15" Canvas.Left="571" Canvas.Top="216"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="{DynamicResource Mapping.TouchpadLeftShort}" Tag="TouchpadLeft"
+                                                              Width="96" Height="125" Canvas.Left="240" Canvas.Top="95"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="{DynamicResource Mapping.TouchpadCenterShort}" Tag="TouchpadCenter"
+                                                              Width="96" Height="125" Canvas.Left="336" Canvas.Top="95"
+                                                              Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
+                                                <ToggleButton Content="{DynamicResource Mapping.TouchpadRightShort}" Tag="TouchpadRight"
+                                                              Width="96" Height="125" Canvas.Left="432" Canvas.Top="95"
                                                               Style="{StaticResource ControllerHotspotStyle}" Click="OnMappingHotspotClick"/>
                                             </Canvas>
                                         </Grid>
@@ -429,7 +439,35 @@
                             </Viewbox>
                         </Grid>
 
-                        <Border Grid.Row="2" Background="{DynamicResource ControlBackground}"
+                        <Border x:Name="TouchpadMappingPanel" Grid.Row="2"
+                                Background="{DynamicResource ControlBackground}"
+                                BorderBrush="{DynamicResource BorderBrushSubtle}" BorderThickness="1"
+                                CornerRadius="8" Padding="10" Margin="0,8,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Mapping.TouchpadZones}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{DynamicResource Mapping.TouchpadHint}"
+                                           Foreground="{DynamicResource MutedForegroundBrush}" Margin="0,2,0,8"/>
+                                <UniformGrid Columns="3">
+                                    <StackPanel Margin="0,0,12,0">
+                                        <TextBlock Text="{DynamicResource Mapping.TouchpadLeft}" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="MapTouchpadLeftCombo" Tag="TouchpadLeft" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,12,0">
+                                        <TextBlock Text="{DynamicResource Mapping.TouchpadCenter}" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="MapTouchpadCenterCombo" Tag="TouchpadCenter" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="{DynamicResource Mapping.TouchpadRight}" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="MapTouchpadRightCombo" Tag="TouchpadRight" Padding="5" FontSize="14"
+                                                  SelectionChanged="OnMappingChanged" GotKeyboardFocus="OnMappingEditorActivated"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Row="3" Background="{DynamicResource ControlBackground}"
                                 BorderBrush="{DynamicResource BorderBrushSubtle}" BorderThickness="1"
                                 CornerRadius="8" Padding="10" Margin="0,8,0,0">
                             <StackPanel>

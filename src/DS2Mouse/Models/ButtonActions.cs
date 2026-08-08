@@ -63,4 +63,7 @@ public sealed class ButtonMappings
     public string Triangle { get; set; } = ButtonActions.Enter;
     public string L3       { get; set; } = ButtonActions.Tab;
     public string R3       { get; set; } = ButtonActions.MiddleClick;
+    public string TouchpadLeft   { get; set; } = ButtonActions.LeftClick;
+    public string TouchpadCenter { get; set; } = ButtonActions.MiddleClick;
+    public string TouchpadRight  { get; set; } = ButtonActions.RightClick;
 }

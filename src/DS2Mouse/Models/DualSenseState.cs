@@ -32,6 +32,13 @@ public enum ConnectionType
     Bluetooth,
 }
 
+/// <summary>One of the two contacts reported by the DualSense touchpad.</summary>
+public readonly record struct TouchContact(
+    bool Active,
+    byte Id,
+    ushort X,
+    ushort Y);
+
 public readonly record struct DualSenseState(
     float LeftStickX,   // -1.0 .. 1.0
     float LeftStickY,   // -1.0 .. 1.0  (positive = up)
@@ -40,6 +47,9 @@ public readonly record struct DualSenseState(
     float L2Trigger,    // 0 .. 1
     float R2Trigger,    // 0 .. 1
     DualSenseButton Buttons,
+    bool HasTouchpadData,
+    TouchContact Touch1,
+    TouchContact Touch2,
     long TimestampTicks)
 {
     public bool IsPressed(DualSenseButton b) => (Buttons & b) == b;

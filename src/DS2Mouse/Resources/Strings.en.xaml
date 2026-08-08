@@ -67,6 +67,14 @@
     <s:String x:Key="Mapping.Configurable">Configurable buttons</s:String>
     <s:String x:Key="Mapping.ListHint">Select a button and change its mapping</s:String>
     <s:String x:Key="Mapping.PresetCombos">Preset shortcuts</s:String>
+    <s:String x:Key="Mapping.TouchpadZones">Touchpad zones</s:String>
+    <s:String x:Key="Mapping.TouchpadHint">Slide one finger to move the pointer (uses left-stick sensitivity); press to trigger the left, center, or right zone mapping</s:String>
+    <s:String x:Key="Mapping.TouchpadLeft">Touchpad left</s:String>
+    <s:String x:Key="Mapping.TouchpadCenter">Touchpad center</s:String>
+    <s:String x:Key="Mapping.TouchpadRight">Touchpad right</s:String>
+    <s:String x:Key="Mapping.TouchpadLeftShort">L</s:String>
+    <s:String x:Key="Mapping.TouchpadCenterShort">M</s:String>
+    <s:String x:Key="Mapping.TouchpadRightShort">R</s:String>
 
     <!-- Action options for configurable mapping dropdowns. -->
     <s:String x:Key="Mapping.None">None</s:String>

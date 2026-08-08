@@ -152,6 +152,9 @@ public sealed class XInputReader : IControllerReader
             L2Trigger:   g.bLeftTrigger  / 255f,
             R2Trigger:   g.bRightTrigger / 255f,
             Buttons:     TranslateButtons(g.wButtons, g.bLeftTrigger, g.bRightTrigger),
+            HasTouchpadData: false,
+            Touch1: default,
+            Touch2: default,
             TimestampTicks: Stopwatch.GetTimestamp());
     }
 

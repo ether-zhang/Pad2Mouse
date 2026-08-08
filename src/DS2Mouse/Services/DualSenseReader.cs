@@ -338,24 +338,24 @@ public sealed class DualSenseReader : IControllerReader
         var reportId = buf[0];
         int o;
 
-        if (reportId == 0x01 && len >= 11)
+        if (reportId == 0x01 && len >= 10)
         {
             if (len >= 64)
             {
                 o = 1;
-                return ParseStandard(buf, o, hasButtons3: true);
+                return ParseStandard(buf, len, o);
             }
             return ParseBtMinimal(buf);
         }
         if (reportId == 0x31 && len >= 14)
         {
             o = 2;
-            return ParseStandard(buf, o, hasButtons3: true);
+            return ParseStandard(buf, len, o);
         }
         return null;
     }
 
-    private static DualSenseState ParseStandard(byte[] buf, int o, bool hasButtons3)
+    private static DualSenseState ParseStandard(byte[] buf, int len, int o)
     {
         float lx = NormStick(buf[o + 0]);
         float ly = -NormStick(buf[o + 1]);
@@ -365,10 +365,16 @@ public sealed class DualSenseReader : IControllerReader
         float r2 = buf[o + 5] / 255f;
         byte b1 = buf[o + 7];
         byte b2 = buf[o + 8];
-        byte b3 = hasButtons3 && (o + 9) < buf.Length ? buf[o + 9] : (byte)0;
+        byte b3 = (o + 9) < len ? buf[o + 9] : (byte)0;
+        bool hasTouchpadData = (o + 39) < len;
+        var touch1 = hasTouchpadData ? ParseTouchContact(buf, o + 32) : default;
+        var touch2 = hasTouchpadData ? ParseTouchContact(buf, o + 36) : default;
 
         var btns = ParseButtons(b1, b2, b3);
-        return new DualSenseState(lx, ly, rx, ry, l2, r2, btns, Stopwatch.GetTimestamp());
+        return new DualSenseState(
+            lx, ly, rx, ry, l2, r2, btns,
+            hasTouchpadData, touch1, touch2,
+            Stopwatch.GetTimestamp());
     }
 
     private static DualSenseState ParseBtMinimal(byte[] buf)
@@ -383,7 +389,22 @@ public sealed class DualSenseReader : IControllerReader
         float l2 = buf[8] / 255f;
         float r2 = buf[9] / 255f;
         var btns = ParseButtons(b1, b2, b3);
-        return new DualSenseState(lx, ly, rx, ry, l2, r2, btns, Stopwatch.GetTimestamp());
+        return new DualSenseState(
+            lx, ly, rx, ry, l2, r2, btns,
+            HasTouchpadData: false, Touch1: default, Touch2: default,
+            Stopwatch.GetTimestamp());
+    }
+
+    private static TouchContact ParseTouchContact(byte[] buf, int offset)
+    {
+        byte contact = buf[offset];
+        bool active = (contact & 0x80) == 0;
+        byte id = (byte)(contact & 0x7F);
+        if (!active) return new TouchContact(false, id, 0, 0);
+
+        ushort x = (ushort)(buf[offset + 1] | ((buf[offset + 2] & 0x0F) << 8));
+        ushort y = (ushort)((buf[offset + 2] >> 4) | (buf[offset + 3] << 4));
+        return new TouchContact(true, id, x, y);
     }
 
     private static float NormStick(byte raw)

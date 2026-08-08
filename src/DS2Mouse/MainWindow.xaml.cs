@@ -107,6 +107,9 @@ public partial class MainWindow : Window
         _showXboxController = showXbox;
         PsControllerView.Visibility = showXbox ? Visibility.Collapsed : Visibility.Visible;
         XboxControllerView.Visibility = showXbox ? Visibility.Visible : Visibility.Collapsed;
+        TouchpadMappingPanel.Visibility = showXbox ? Visibility.Collapsed : Visibility.Visible;
+        if (showXbox && _selectedMappingSlot.StartsWith("Touchpad", StringComparison.Ordinal))
+            _selectedMappingSlot = "Cross";
         Canvas.SetTop(DPadCallout, showXbox ? 247 : 181);
         Canvas.SetTop(L3Callout, showXbox ? 181 : 247);
         PresetToggleComboLabel.Text = showXbox ? "LSB + RSB" : "L3 + R3";
@@ -462,6 +465,9 @@ public partial class MainWindow : Window
         yield return MapTriangleCombo;
         yield return MapL3Combo;
         yield return MapR3Combo;
+        yield return MapTouchpadLeftCombo;
+        yield return MapTouchpadCenterCombo;
+        yield return MapTouchpadRightCombo;
     }
 
     private IEnumerable<ToggleButton> MappingListButtons()
@@ -493,6 +499,9 @@ public partial class MainWindow : Window
         (false, "Circle") => "○",
         (false, "Square") => "□",
         (false, "Triangle") => "△",
+        (false, "TouchpadLeft") => _loc.Get("Mapping.TouchpadLeft"),
+        (false, "TouchpadCenter") => _loc.Get("Mapping.TouchpadCenter"),
+        (false, "TouchpadRight") => _loc.Get("Mapping.TouchpadRight"),
         _ => slot,
     };
 
@@ -513,6 +522,9 @@ public partial class MainWindow : Window
         "Triangle" => _config.Mappings.Triangle,
         "L3"       => _config.Mappings.L3,
         "R3"       => _config.Mappings.R3,
+        "TouchpadLeft"   => _config.Mappings.TouchpadLeft,
+        "TouchpadCenter" => _config.Mappings.TouchpadCenter,
+        "TouchpadRight"  => _config.Mappings.TouchpadRight,
         _ => ButtonActions.None,
     };
 
@@ -528,6 +540,9 @@ public partial class MainWindow : Window
             case "Triangle": _config.Mappings.Triangle = action; break;
             case "L3":       _config.Mappings.L3       = action; break;
             case "R3":       _config.Mappings.R3       = action; break;
+            case "TouchpadLeft":   _config.Mappings.TouchpadLeft   = action; break;
+            case "TouchpadCenter": _config.Mappings.TouchpadCenter = action; break;
+            case "TouchpadRight":  _config.Mappings.TouchpadRight  = action; break;
         }
     }
 
