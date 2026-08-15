@@ -140,17 +140,12 @@ public sealed class DualSenseReader : IControllerReader
                 ? ConnectionType.Bluetooth
                 : ConnectionType.Usb;
 
-            // For BT, request feature report 0x05 to switch to extended report 0x31.
-            if (conn == ConnectionType.Bluetooth)
-            {
-                try
-                {
-                    var feat = new byte[41];
-                    feat[0] = 0x05;
-                    stream.GetFeature(feat);
-                }
-                catch { /* harmless if it fails — many drivers still emit 0x31 */ }
-            }
+            // Bluetooth needs a feature request to switch to the extended 0x31
+            // report. Avoid sending control requests over USB so this shared
+            // HID reader does not interfere with Steam's controller session.
+            var motionCalibration = conn == ConnectionType.Bluetooth
+                ? ReadMotionCalibration(stream)
+                : MotionCalibration.Raw;
 
             var slot = new DeviceSlot
             {
@@ -159,6 +154,7 @@ public sealed class DualSenseReader : IControllerReader
                 ConnectionType = conn,
                 ProductName = ProductName(device.ProductID),
                 SerialNumber = serial,
+                MotionCalibration = motionCalibration,
                 Cts = CancellationTokenSource.CreateLinkedTokenSource(parentCt),
             };
             slot.Thread = new Thread(() => ReadSlot(slot))
@@ -194,7 +190,7 @@ public sealed class DualSenseReader : IControllerReader
                 var len = slot.Stream.Read(buf, 0, buf.Length);
                 if (len > 0)
                 {
-                    var state = TryParse(buf, len);
+                    var state = TryParse(buf, len, slot.MotionCalibration);
                     if (state.HasValue)
                     {
                         slot.LatestState = state.Value;
@@ -332,7 +328,7 @@ public sealed class DualSenseReader : IControllerReader
         _      => "Controller",
     };
 
-    private static DualSenseState? TryParse(byte[] buf, int len)
+    private static DualSenseState? TryParse(byte[] buf, int len, MotionCalibration motionCalibration)
     {
         if (len < 10) return null;
         var reportId = buf[0];
@@ -343,19 +339,20 @@ public sealed class DualSenseReader : IControllerReader
             if (len >= 64)
             {
                 o = 1;
-                return ParseStandard(buf, len, o);
+                return ParseStandard(buf, len, o, motionCalibration);
             }
             return ParseBtMinimal(buf);
         }
-        if (reportId == 0x31 && len >= 14)
+        if (reportId == 0x31 && len >= 42)
         {
             o = 2;
-            return ParseStandard(buf, len, o);
+            return ParseStandard(buf, len, o, motionCalibration);
         }
         return null;
     }
 
-    private static DualSenseState ParseStandard(byte[] buf, int len, int o)
+    private static DualSenseState ParseStandard(
+        byte[] buf, int len, int o, MotionCalibration motionCalibration)
     {
         float lx = NormStick(buf[o + 0]);
         float ly = -NormStick(buf[o + 1]);
@@ -369,12 +366,23 @@ public sealed class DualSenseReader : IControllerReader
         bool hasTouchpadData = (o + 39) < len;
         var touch1 = hasTouchpadData ? ParseTouchContact(buf, o + 32) : default;
         var touch2 = hasTouchpadData ? ParseTouchContact(buf, o + 36) : default;
+        bool hasGyroData = (o + 30) < len;
+        float gyroX = hasGyroData ? motionCalibration.GyroX.Apply(ReadInt16(buf, o + 15)) : 0;
+        float gyroY = hasGyroData ? motionCalibration.GyroY.Apply(ReadInt16(buf, o + 17)) : 0;
+        float gyroZ = hasGyroData ? motionCalibration.GyroZ.Apply(ReadInt16(buf, o + 19)) : 0;
+        float accelX = hasGyroData ? motionCalibration.AccelX.Apply(ReadInt16(buf, o + 21)) : 0;
+        float accelY = hasGyroData ? motionCalibration.AccelY.Apply(ReadInt16(buf, o + 23)) : 0;
+        float accelZ = hasGyroData ? motionCalibration.AccelZ.Apply(ReadInt16(buf, o + 25)) : 0;
+        uint sensorTimestamp = hasGyroData ? ReadUInt32(buf, o + 27) : 0;
+        long now = Stopwatch.GetTimestamp();
 
         var btns = ParseButtons(b1, b2, b3);
         return new DualSenseState(
             lx, ly, rx, ry, l2, r2, btns,
             hasTouchpadData, touch1, touch2,
-            Stopwatch.GetTimestamp());
+            hasGyroData, gyroX, gyroY, gyroZ, accelX, accelY, accelZ, sensorTimestamp,
+            hasGyroData ? now : 0,
+            now);
     }
 
     private static DualSenseState ParseBtMinimal(byte[] buf)
@@ -392,8 +400,68 @@ public sealed class DualSenseReader : IControllerReader
         return new DualSenseState(
             lx, ly, rx, ry, l2, r2, btns,
             HasTouchpadData: false, Touch1: default, Touch2: default,
+            HasGyroData: false, GyroX: 0, GyroY: 0, GyroZ: 0,
+            AccelX: 0, AccelY: 0, AccelZ: 0,
+            SensorTimestamp: 0, GyroTimestampTicks: 0,
             Stopwatch.GetTimestamp());
     }
+
+    private static MotionCalibration ReadMotionCalibration(HidStream stream)
+    {
+        try
+        {
+            var report = new byte[41];
+            report[0] = 0x05;
+            stream.GetFeature(report);
+
+            int pitchBias = ReadInt16(report, 1);
+            int yawBias = ReadInt16(report, 3);
+            int rollBias = ReadInt16(report, 5);
+            int pitchPlus = ReadInt16(report, 7);
+            int pitchMinus = ReadInt16(report, 9);
+            int yawPlus = ReadInt16(report, 11);
+            int yawMinus = ReadInt16(report, 13);
+            int rollPlus = ReadInt16(report, 15);
+            int rollMinus = ReadInt16(report, 17);
+            int speed2X = ReadInt16(report, 19) + ReadInt16(report, 21);
+            int accelXPlus = ReadInt16(report, 23);
+            int accelXMinus = ReadInt16(report, 25);
+            int accelYPlus = ReadInt16(report, 27);
+            int accelYMinus = ReadInt16(report, 29);
+            int accelZPlus = ReadInt16(report, 31);
+            int accelZMinus = ReadInt16(report, 33);
+
+            var gyroX = GyroAxisCalibration.FromFactory(pitchBias, pitchPlus, pitchMinus, speed2X);
+            var gyroY = GyroAxisCalibration.FromFactory(yawBias, yawPlus, yawMinus, speed2X);
+            var gyroZ = GyroAxisCalibration.FromFactory(rollBias, rollPlus, rollMinus, speed2X);
+            var accelX = AccelAxisCalibration.FromFactory(accelXPlus, accelXMinus);
+            var accelY = AccelAxisCalibration.FromFactory(accelYPlus, accelYMinus);
+            var accelZ = AccelAxisCalibration.FromFactory(accelZPlus, accelZMinus);
+            if (gyroX.IsValid && gyroY.IsValid && gyroZ.IsValid
+                && accelX.IsValid && accelY.IsValid && accelZ.IsValid)
+            {
+                return new MotionCalibration(
+                    gyroX, gyroY, gyroZ,
+                    accelX, accelY, accelZ);
+            }
+        }
+        catch
+        {
+            // Raw fallback below also keeps Bluetooth usable when feature
+            // reports are blocked by a third-party HID filter.
+        }
+
+        return MotionCalibration.Raw;
+    }
+
+    private static short ReadInt16(byte[] data, int offset) =>
+        unchecked((short)(data[offset] | (data[offset + 1] << 8)));
+
+    private static uint ReadUInt32(byte[] data, int offset) =>
+        (uint)(data[offset]
+            | (data[offset + 1] << 8)
+            | (data[offset + 2] << 16)
+            | (data[offset + 3] << 24));
 
     private static TouchContact ParseTouchContact(byte[] buf, int offset)
     {
@@ -462,9 +530,72 @@ public sealed class DualSenseReader : IControllerReader
         // simultaneously on both transports. Null means the device didn't
         // expose one — fall back to DevicePath uniqueness.
         public string? SerialNumber { get; init; }
+        public MotionCalibration MotionCalibration { get; init; } = MotionCalibration.Raw;
         public CancellationTokenSource? Cts;
         public Thread? Thread;
         public DualSenseState? LatestState;
         public volatile bool Dead;
+    }
+
+    private readonly record struct MotionCalibration(
+        GyroAxisCalibration GyroX,
+        GyroAxisCalibration GyroY,
+        GyroAxisCalibration GyroZ,
+        AccelAxisCalibration AccelX,
+        AccelAxisCalibration AccelY,
+        AccelAxisCalibration AccelZ)
+    {
+        public static MotionCalibration Raw { get; } = new(
+            GyroAxisCalibration.Raw,
+            GyroAxisCalibration.Raw,
+            GyroAxisCalibration.Raw,
+            AccelAxisCalibration.Raw,
+            AccelAxisCalibration.Raw,
+            AccelAxisCalibration.Raw);
+    }
+
+    private readonly record struct GyroAxisCalibration(int Bias, float DegreesPerSecondPerUnit)
+    {
+        private const float RawScale = 1f / 16f;
+
+        public bool IsValid => DegreesPerSecondPerUnit > 0;
+        public float Apply(short raw) => (raw - Bias) * DegreesPerSecondPerUnit;
+
+        public static GyroAxisCalibration Raw { get; } = new(0, RawScale);
+
+        public static GyroAxisCalibration FromFactory(
+            int bias, int plus, int minus, int speed2X)
+        {
+            int denominator = plus - minus;
+            if (Math.Abs(bias) > 1024 || denominator == 0) return default;
+
+            // Sony stores the normalized scale in 1/1024 degree/s units.
+            // SDL's validity check expects this intermediate value near 64.
+            float sensitivity = speed2X * 1024f / denominator;
+            if (sensitivity < 32f || sensitivity > 96f) return default;
+            return new GyroAxisCalibration(bias, sensitivity / 1024f);
+        }
+    }
+
+    private readonly record struct AccelAxisCalibration(int Bias, float GPerUnit)
+    {
+        private const float RawScale = 1f / 8192f;
+
+        public bool IsValid => GPerUnit > 0;
+        public float Apply(short raw) => (raw - Bias) * GPerUnit;
+
+        public static AccelAxisCalibration Raw { get; } = new(0, RawScale);
+
+        public static AccelAxisCalibration FromFactory(int plus, int minus)
+        {
+            int range2G = plus - minus;
+            if (range2G == 0) return default;
+
+            int bias = plus - range2G / 2;
+            float sensitivity = 2f * 8192f / range2G;
+            if (Math.Abs(bias) > 1024 || sensitivity < 0.5f || sensitivity > 1.5f)
+                return default;
+            return new AccelAxisCalibration(bias, sensitivity / 8192f);
+        }
     }
 }

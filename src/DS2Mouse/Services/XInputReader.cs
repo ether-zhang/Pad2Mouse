@@ -155,6 +155,15 @@ public sealed class XInputReader : IControllerReader
             HasTouchpadData: false,
             Touch1: default,
             Touch2: default,
+            HasGyroData: false,
+            GyroX: 0,
+            GyroY: 0,
+            GyroZ: 0,
+            AccelX: 0,
+            AccelY: 0,
+            AccelZ: 0,
+            SensorTimestamp: 0,
+            GyroTimestampTicks: 0,
             TimestampTicks: Stopwatch.GetTimestamp());
     }
 

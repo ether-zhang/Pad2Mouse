@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using DS2Mouse.Models;
 
 namespace DS2Mouse.Services;
@@ -45,6 +46,11 @@ public sealed class MapperEngine : IDisposable
     private int _touchMoveSlot;
     private ushort _touchMoveX, _touchMoveY;
     private float _touchMoveAccumX, _touchMoveAccumY;
+    private float _gyroAccumX, _gyroAccumY;
+    private long _lastGyroFrameTicks;
+    private uint _lastGyroSensorTimestamp;
+    private float _gravityX, _gravityY, _gravityZ;
+    private bool _hasGravity;
     private int _lastTouchX = TouchpadWidth / 2;
     private long _lastTouchSeenMs;
     private float _scrollAccum;
@@ -145,6 +151,7 @@ public sealed class MapperEngine : IDisposable
         }
 
         ProcessLeftStick(s);
+        ProcessGyro(s);
         ProcessRightStick(s);
         ProcessTouchpad(s);
         ProcessTriggers(s);
@@ -165,7 +172,133 @@ public sealed class MapperEngine : IDisposable
         return s.Buttons != DualSenseButton.None
             || MathF.Abs(s.LeftStickX)  > Thr || MathF.Abs(s.LeftStickY)  > Thr
             || MathF.Abs(s.RightStickX) > Thr || MathF.Abs(s.RightStickY) > Thr
+            || (s.HasGyroData && (MathF.Abs(s.GyroX) > 3f
+                || MathF.Abs(s.GyroY) > 3f || MathF.Abs(s.GyroZ) > 3f))
             || s.Touch1.Active || s.Touch2.Active;
+    }
+
+    private void ProcessGyro(in DualSenseState s)
+    {
+        var config = Config.Gyro;
+        if (!config.Enabled || !s.HasGyroData || !IsGyroActive(s, config.Activation))
+        {
+            ResetGyroMotion();
+            return;
+        }
+
+        // The mapper ticks independently of HID reports. Consume each sensor
+        // frame once so a slow transport cannot repeat the same rotation.
+        long frameTicks = s.GyroTimestampTicks;
+        if (frameTicks == _lastGyroFrameTicks) return;
+        if (_lastGyroFrameTicks == 0)
+        {
+            _lastGyroFrameTicks = frameTicks;
+            _lastGyroSensorTimestamp = s.SensorTimestamp;
+            UpdateGravity(s, 0f);
+            return;
+        }
+
+        float hostDt = (frameTicks - _lastGyroFrameTicks) / (float)Stopwatch.Frequency;
+        uint sensorDelta = unchecked(s.SensorTimestamp - _lastGyroSensorTimestamp);
+        float sensorDt = sensorDelta / 3_000_000f; // DualSense timestamp units are about 0.33 us.
+        float dt = sensorDt is > 0f and <= 0.05f ? sensorDt : hostDt;
+        _lastGyroFrameTicks = frameTicks;
+        _lastGyroSensorTimestamp = s.SensorTimestamp;
+        if (dt <= 0f || dt > 0.05f)
+        {
+            _gyroAccumX = 0;
+            _gyroAccumY = 0;
+            return;
+        }
+
+        UpdateGravity(s, dt);
+
+        // Player-space yaw keeps horizontal movement broad as the controller
+        // tilts. Keep local roll as an independent candidate so rotating around
+        // Z never gets cancelled by the gravity projection.
+        float playerSpaceX = -CalculatePlayerSpaceYaw(s.GyroY, s.GyroZ);
+        float rollX = -s.GyroZ * MathF.Max(0, config.ZAxisMultiplier);
+        float velocityX = MathF.Abs(rollX) > MathF.Abs(playerSpaceX)
+            ? rollX
+            : playerSpaceX;
+        float velocityY = -s.GyroX;
+        float magnitude = MathF.Sqrt(velocityX * velocityX + velocityY * velocityY);
+        float deadzone = MathF.Max(0, config.Deadzone);
+        if (magnitude <= deadzone) return;
+
+        float deadzoneScale = (magnitude - deadzone) / magnitude;
+        float scale = dt * deadzoneScale;
+        _gyroAccumX += velocityX * config.HorizontalSensitivity * scale;
+        _gyroAccumY += velocityY * config.Sensitivity * scale;
+
+        int dx = (int)MathF.Truncate(_gyroAccumX);
+        int dy = (int)MathF.Truncate(_gyroAccumY);
+        if (dx == 0 && dy == 0) return;
+
+        InputSimulator.MoveRelative(dx, dy);
+        _gyroAccumX -= dx;
+        _gyroAccumY -= dy;
+    }
+
+    private void UpdateGravity(in DualSenseState s, float dt)
+    {
+        float magnitude = MathF.Sqrt(
+            s.AccelX * s.AccelX + s.AccelY * s.AccelY + s.AccelZ * s.AccelZ);
+        if (magnitude is < 0.5f or > 1.5f) return;
+
+        // An accelerometer at rest points opposite gravity. GamepadMotionHelpers'
+        // player-space formula expects the gravity vector itself.
+        float x = -s.AccelX / magnitude;
+        float y = -s.AccelY / magnitude;
+        float z = -s.AccelZ / magnitude;
+        if (!_hasGravity)
+        {
+            _gravityX = x;
+            _gravityY = y;
+            _gravityZ = z;
+            _hasGravity = true;
+            return;
+        }
+
+        const float GravitySmoothingSeconds = 0.25f;
+        float blend = 1f - MathF.Exp(-dt / GravitySmoothingSeconds);
+        _gravityX += (x - _gravityX) * blend;
+        _gravityY += (y - _gravityY) * blend;
+        _gravityZ += (z - _gravityZ) * blend;
+        float filteredMagnitude = MathF.Sqrt(
+            _gravityX * _gravityX + _gravityY * _gravityY + _gravityZ * _gravityZ);
+        if (filteredMagnitude <= 0f) return;
+        _gravityX /= filteredMagnitude;
+        _gravityY /= filteredMagnitude;
+        _gravityZ /= filteredMagnitude;
+    }
+
+    private float CalculatePlayerSpaceYaw(float gyroY, float gyroZ)
+    {
+        if (!_hasGravity) return gyroY;
+
+        const float YawRelaxFactor = 1.41f;
+        float worldYaw = -(_gravityY * gyroY + _gravityZ * gyroZ);
+        float yawLimit = MathF.Sqrt(gyroY * gyroY + gyroZ * gyroZ);
+        float magnitude = MathF.Min(MathF.Abs(worldYaw) * YawRelaxFactor, yawLimit);
+        return MathF.CopySign(magnitude, worldYaw);
+    }
+
+    private bool IsGyroActive(in DualSenseState s, string activation) => activation switch
+    {
+        GyroActivationModes.HoldL2 => s.L2Trigger > Config.TriggerThreshold,
+        GyroActivationModes.HoldR2 => s.R2Trigger > Config.TriggerThreshold,
+        _ => true,
+    };
+
+    private void ResetGyroMotion()
+    {
+        _lastGyroFrameTicks = 0;
+        _lastGyroSensorTimestamp = 0;
+        _gravityX = _gravityY = _gravityZ = 0;
+        _hasGravity = false;
+        _gyroAccumX = 0;
+        _gyroAccumY = 0;
     }
 
     private void ProcessTouchpad(in DualSenseState s)
@@ -185,7 +318,7 @@ public sealed class MapperEngine : IDisposable
                 _lastTouchSeenMs = Environment.TickCount64;
             }
 
-            if (activeCount == 1)
+            if (Config.TouchpadPointerEnabled && activeCount == 1)
             {
                 var touch = s.Touch1.Active ? s.Touch1 : s.Touch2;
                 int slot = s.Touch1.Active ? 1 : 2;
@@ -193,8 +326,8 @@ public sealed class MapperEngine : IDisposable
             }
             else
             {
-                // Two contacts are reserved for gestures; do not let a slot
-                // change or a second finger cause a pointer jump.
+                // Two contacts are reserved for gestures. Resetting here also
+                // prevents a jump when pointer movement is re-enabled mid-touch.
                 ResetTouchpadMotion();
             }
         }
@@ -504,6 +637,7 @@ public sealed class MapperEngine : IDisposable
         _touchpadClickRegion = TouchpadRegion.None;
         _lastTouchSeenMs = 0;
         ResetTouchpadMotion();
+        ResetGyroMotion();
 
         // Release D-Pad-mapped arrows
         if ((_prevButtons & DualSenseButton.DPadUp)    != 0) InputSimulator.KeyUp(VK_UP);

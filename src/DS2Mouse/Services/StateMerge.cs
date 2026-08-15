@@ -16,6 +16,7 @@ internal static class StateMerge
         var (lx, ly) = MagMax(a.LeftStickX,  a.LeftStickY,  b.LeftStickX,  b.LeftStickY);
         var (rx, ry) = MagMax(a.RightStickX, a.RightStickY, b.RightStickX, b.RightStickY);
         var touch = SelectTouchpad(a, b);
+        var gyro = SelectGyro(a, b);
         return new DualSenseState(
             lx, ly, rx, ry,
             MathF.Max(a.L2Trigger, b.L2Trigger),
@@ -24,7 +25,23 @@ internal static class StateMerge
             touch.HasTouchpadData,
             touch.Touch1,
             touch.Touch2,
+            gyro.HasGyroData,
+            gyro.GyroX,
+            gyro.GyroY,
+            gyro.GyroZ,
+            gyro.AccelX,
+            gyro.AccelY,
+            gyro.AccelZ,
+            gyro.SensorTimestamp,
+            gyro.GyroTimestampTicks,
             Math.Max(a.TimestampTicks, b.TimestampTicks));
+    }
+
+    private static DualSenseState SelectGyro(DualSenseState a, DualSenseState b)
+    {
+        if (!a.HasGyroData) return b;
+        if (!b.HasGyroData) return a;
+        return a.GyroTimestampTicks >= b.GyroTimestampTicks ? a : b;
     }
 
     private static DualSenseState SelectTouchpad(DualSenseState a, DualSenseState b)

@@ -55,9 +55,11 @@ public sealed class ConfigStore
             var c = JsonSerializer.Deserialize<AppConfig>(json, Options) ?? AppConfig.Default();
             c.LeftStick ??= new StickConfig();
             c.RightStick ??= new ScrollConfig();
+            c.Gyro ??= new GyroConfig();
             c.Mappings ??= new ButtonMappings();
             c.FullscreenWhitelist ??= new List<string>();
             MigrateLegacyR2OrCross(json, c.Mappings);
+            MigrateGyroDefaults(json, c);
             return c;
         }
         catch
@@ -81,6 +83,38 @@ public sealed class ConfigStore
             if (string.IsNullOrEmpty(v)) return;
             mappings.R2 = v;
             mappings.Cross = v;
+        }
+        catch { /* migration is best-effort */ }
+    }
+
+    private static void MigrateGyroDefaults(string json, AppConfig config)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("Gyro", out var gyro))
+            {
+                if (!gyro.TryGetProperty("HorizontalSensitivity", out _))
+                    config.Gyro.HorizontalSensitivity = config.Gyro.Sensitivity * 2f;
+                return;
+            }
+
+            // Preserve the selected sensitivity preset for configs written
+            // before gyro settings existed.
+            if (MathF.Abs(config.LeftStick.Sensitivity - 8f) < 0.001f
+                && MathF.Abs(config.LeftStick.Deadzone - 0.12f) < 0.001f)
+            {
+                config.Gyro.Sensitivity = 8f;
+                config.Gyro.HorizontalSensitivity = 16f;
+                config.Gyro.Deadzone = 2f;
+            }
+            else if (MathF.Abs(config.LeftStick.Sensitivity - 18f) < 0.001f
+                && MathF.Abs(config.LeftStick.Deadzone - 0.08f) < 0.001f)
+            {
+                config.Gyro.Sensitivity = 18f;
+                config.Gyro.HorizontalSensitivity = 36f;
+                config.Gyro.Deadzone = 1f;
+            }
         }
         catch { /* migration is best-effort */ }
     }

@@ -50,6 +50,15 @@ public readonly record struct DualSenseState(
     bool HasTouchpadData,
     TouchContact Touch1,
     TouchContact Touch2,
+    bool HasGyroData,
+    float GyroX,         // degrees per second around the controller X axis
+    float GyroY,         // degrees per second around the controller Y axis
+    float GyroZ,         // degrees per second around the controller Z axis
+    float AccelX,        // g-force, including gravity
+    float AccelY,
+    float AccelZ,
+    uint SensorTimestamp,
+    long GyroTimestampTicks,
     long TimestampTicks)
 {
     public bool IsPressed(DualSenseButton b) => (Buttons & b) == b;
