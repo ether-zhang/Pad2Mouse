@@ -27,7 +27,18 @@
     <s:String x:Key="Section.Whitelist">Fullscreen whitelist (process names — mapping auto-disables in fullscreen UNLESS the process is listed)</s:String>
     <s:String x:Key="Section.Mapping">Button mapping</s:String>
     <s:String x:Key="Section.Sensitivity">Sensitivity</s:String>
+    <s:String x:Key="Section.Gyro">Gyroscope</s:String>
     <s:String x:Key="Section.Settings">Settings</s:String>
+
+    <s:String x:Key="Gyro.Enable">Use gyroscope to move the pointer</s:String>
+    <s:String x:Key="Gyro.Hint">Uses DualSense factory calibration; unavailable on Xbox controllers</s:String>
+    <s:String x:Key="Gyro.Activation">Trigger mode</s:String>
+    <s:String x:Key="Gyro.Activation.Always">Always on</s:String>
+    <s:String x:Key="Gyro.Activation.HoldL2">Hold L2</s:String>
+    <s:String x:Key="Gyro.Activation.HoldR2">Hold R2</s:String>
+    <s:String x:Key="Touchpad.Enable">Use touchpad to move the pointer</s:String>
+    <s:String x:Key="Touchpad.PointerHint">Move the pointer with one finger; sensitivity follows the left stick</s:String>
+    <s:String x:Key="Touchpad.ClickHint">Press the left, center, or right zone to trigger its mapped action</s:String>
 
     <s:String x:Key="Sensitivity.Hint">Choose a preset or open the custom controls</s:String>
     <s:String x:Key="Preset.Precise">Precise</s:String>
@@ -44,6 +55,10 @@
     <s:String x:Key="Field.AccelMax">Accel max (×)</s:String>
     <s:String x:Key="Field.AccelRamp">Time to peak (s)</s:String>
     <s:String x:Key="Field.ScrollSpeed">Speed (notch/s)</s:String>
+    <s:String x:Key="Field.GyroHorizontalSensitivity">Horizontal (px/degree)</s:String>
+    <s:String x:Key="Field.GyroVerticalSensitivity">Vertical (px/degree)</s:String>
+    <s:String x:Key="Field.GyroZMultiplier">Z-axis multiplier</s:String>
+    <s:String x:Key="Field.GyroDeadzone">Still deadzone (degree/s)</s:String>
     <s:String x:Key="Field.Language">Language</s:String>
     <s:String x:Key="Field.Notifications">Enable notifications</s:String>
     <s:String x:Key="Field.AutoStart">Start with Windows</s:String>

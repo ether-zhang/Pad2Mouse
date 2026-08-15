@@ -32,11 +32,15 @@ public partial class MainWindow : Window
         float AccelRamp,
         float ScrollSpeed,
         float ScrollAccelMax,
-        float ScrollAccelRamp);
+        float ScrollAccelRamp,
+        float GyroSensitivity,
+        float GyroHorizontalSensitivity,
+        float GyroZAxisMultiplier,
+        float GyroDeadzone);
 
-    private static readonly SensitivityPreset PrecisePreset = new(8f, 0.12f, 1.8f, 1.2f, 6f, 1.8f, 1.2f);
-    private static readonly SensitivityPreset BalancedPreset = new(12f, 0.10f, 2.5f, 1.0f, 8f, 2.5f, 1.0f);
-    private static readonly SensitivityPreset FastPreset = new(18f, 0.08f, 3.5f, 0.7f, 12f, 3.5f, 0.7f);
+    private static readonly SensitivityPreset PrecisePreset = new(8f, 0.12f, 1.8f, 1.2f, 6f, 1.8f, 1.2f, 8f, 16f, 2f, 2f);
+    private static readonly SensitivityPreset BalancedPreset = new(12f, 0.10f, 2.5f, 1.0f, 8f, 2.5f, 1.0f, 12f, 24f, 2f, 1.5f);
+    private static readonly SensitivityPreset FastPreset = new(18f, 0.08f, 3.5f, 0.7f, 12f, 3.5f, 0.7f, 18f, 36f, 2f, 1f);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, uint attr, ref uint value, uint size);
@@ -67,6 +71,10 @@ public partial class MainWindow : Window
         ScrollSlider.Value          = _config.RightStick.Speed;
         ScrollAccelMaxSlider.Value  = _config.RightStick.AccelMaxFactor;
         ScrollAccelRampSlider.Value = _config.RightStick.AccelRampSeconds;
+        GyroSensSlider.Value        = _config.Gyro.Sensitivity;
+        GyroHorizontalSensSlider.Value = _config.Gyro.HorizontalSensitivity;
+        GyroZMultiplierSlider.Value    = _config.Gyro.ZAxisMultiplier;
+        GyroDeadzoneSlider.Value    = _config.Gyro.Deadzone;
         SensVal.Text            = $"{_config.LeftStick.Sensitivity:0}";
         DzVal.Text              = $"{_config.LeftStick.Deadzone:0.00}";
         AccelMaxVal.Text        = $"{_config.LeftStick.AccelMaxFactor:0.0}";
@@ -74,7 +82,15 @@ public partial class MainWindow : Window
         ScrollVal.Text          = $"{_config.RightStick.Speed:0}";
         ScrollAccelMaxVal.Text  = $"{_config.RightStick.AccelMaxFactor:0.0}";
         ScrollAccelRampVal.Text = $"{_config.RightStick.AccelRampSeconds:0.0}";
+        GyroSensVal.Text        = $"{_config.Gyro.Sensitivity:0}";
+        GyroHorizontalSensVal.Text = $"{_config.Gyro.HorizontalSensitivity:0}";
+        GyroZMultiplierVal.Text    = $"{_config.Gyro.ZAxisMultiplier:0.0}";
+        GyroDeadzoneVal.Text    = $"{_config.Gyro.Deadzone:0.0}";
         EnableCheck.IsChecked = _mapper.Enabled;
+        GyroCheck.IsChecked = _config.Gyro.Enabled;
+        TouchpadCheck.IsChecked = _config.TouchpadPointerEnabled;
+        GyroActivationCombo.IsEnabled = _config.Gyro.Enabled;
+        SelectGyroActivation(_config.Gyro.Activation);
         NotifyCheck.IsChecked = _config.EnableNotifications;
         AutoStartCheck.IsChecked = StartupRegistration.IsRegistered();
         SelectLanguageInCombo(_loc.CurrentLanguage);
@@ -108,6 +124,8 @@ public partial class MainWindow : Window
         PsControllerView.Visibility = showXbox ? Visibility.Collapsed : Visibility.Visible;
         XboxControllerView.Visibility = showXbox ? Visibility.Visible : Visibility.Collapsed;
         TouchpadMappingPanel.Visibility = showXbox ? Visibility.Collapsed : Visibility.Visible;
+        GyroPanel.Visibility = showXbox ? Visibility.Collapsed : Visibility.Visible;
+        CustomGyroPanel.Visibility = showXbox ? Visibility.Collapsed : Visibility.Visible;
         if (showXbox && _selectedMappingSlot.StartsWith("Touchpad", StringComparison.Ordinal))
             _selectedMappingSlot = "Cross";
         Canvas.SetTop(DPadCallout, showXbox ? 247 : 181);
@@ -268,6 +286,78 @@ public partial class MainWindow : Window
         App.Current.SaveConfig();
     }
 
+    private void OnGyroToggle(object sender, RoutedEventArgs e)
+    {
+        if (!_initialized) return;
+        _config.Gyro.Enabled = GyroCheck.IsChecked == true;
+        GyroActivationCombo.IsEnabled = _config.Gyro.Enabled;
+        App.Current.SaveConfig();
+    }
+
+    private void OnTouchpadToggle(object sender, RoutedEventArgs e)
+    {
+        if (!_initialized) return;
+        _config.TouchpadPointerEnabled = TouchpadCheck.IsChecked == true;
+        App.Current.SaveConfig();
+    }
+
+    private void OnGyroActivationChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_initialized || GyroActivationCombo.SelectedItem is not ComboBoxItem { Tag: string activation })
+            return;
+        _config.Gyro.Activation = activation;
+        App.Current.SaveConfig();
+    }
+
+    private void OnGyroSensChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_initialized || _updatingSensitivityUi) return;
+        _config.Gyro.Sensitivity = (float)e.NewValue;
+        GyroSensVal.Text = $"{e.NewValue:0}";
+        MarkSensitivityCustom();
+        App.Current.SaveConfig();
+    }
+
+    private void OnGyroHorizontalSensChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_initialized || _updatingSensitivityUi) return;
+        _config.Gyro.HorizontalSensitivity = (float)e.NewValue;
+        GyroHorizontalSensVal.Text = $"{e.NewValue:0}";
+        MarkSensitivityCustom();
+        App.Current.SaveConfig();
+    }
+
+    private void OnGyroZMultiplierChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_initialized || _updatingSensitivityUi) return;
+        _config.Gyro.ZAxisMultiplier = (float)e.NewValue;
+        GyroZMultiplierVal.Text = $"{e.NewValue:0.0}";
+        MarkSensitivityCustom();
+        App.Current.SaveConfig();
+    }
+
+    private void OnGyroDeadzoneChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_initialized || _updatingSensitivityUi) return;
+        _config.Gyro.Deadzone = (float)e.NewValue;
+        GyroDeadzoneVal.Text = $"{e.NewValue:0.0}";
+        MarkSensitivityCustom();
+        App.Current.SaveConfig();
+    }
+
+    private void SelectGyroActivation(string activation)
+    {
+        foreach (var item in GyroActivationCombo.Items.OfType<ComboBoxItem>())
+        {
+            if (Equals(item.Tag, activation))
+            {
+                GyroActivationCombo.SelectedItem = item;
+                return;
+            }
+        }
+        GyroActivationCombo.SelectedIndex = 0;
+    }
+
     private void OnSensitivityPresetClick(object sender, RoutedEventArgs e)
     {
         if (!_initialized || sender is not ToggleButton { Tag: string presetId }) return;
@@ -299,6 +389,10 @@ public partial class MainWindow : Window
         _config.RightStick.Speed = preset.ScrollSpeed;
         _config.RightStick.AccelMaxFactor = preset.ScrollAccelMax;
         _config.RightStick.AccelRampSeconds = preset.ScrollAccelRamp;
+        _config.Gyro.Sensitivity = preset.GyroSensitivity;
+        _config.Gyro.HorizontalSensitivity = preset.GyroHorizontalSensitivity;
+        _config.Gyro.ZAxisMultiplier = preset.GyroZAxisMultiplier;
+        _config.Gyro.Deadzone = preset.GyroDeadzone;
 
         _updatingSensitivityUi = true;
         try
@@ -324,6 +418,10 @@ public partial class MainWindow : Window
         ScrollSlider.Value = _config.RightStick.Speed;
         ScrollAccelMaxSlider.Value = _config.RightStick.AccelMaxFactor;
         ScrollAccelRampSlider.Value = _config.RightStick.AccelRampSeconds;
+        GyroSensSlider.Value = _config.Gyro.Sensitivity;
+        GyroHorizontalSensSlider.Value = _config.Gyro.HorizontalSensitivity;
+        GyroZMultiplierSlider.Value = _config.Gyro.ZAxisMultiplier;
+        GyroDeadzoneSlider.Value = _config.Gyro.Deadzone;
         SensVal.Text = $"{_config.LeftStick.Sensitivity:0}";
         DzVal.Text = $"{_config.LeftStick.Deadzone:0.00}";
         AccelMaxVal.Text = $"{_config.LeftStick.AccelMaxFactor:0.0}";
@@ -331,6 +429,10 @@ public partial class MainWindow : Window
         ScrollVal.Text = $"{_config.RightStick.Speed:0}";
         ScrollAccelMaxVal.Text = $"{_config.RightStick.AccelMaxFactor:0.0}";
         ScrollAccelRampVal.Text = $"{_config.RightStick.AccelRampSeconds:0.0}";
+        GyroSensVal.Text = $"{_config.Gyro.Sensitivity:0}";
+        GyroHorizontalSensVal.Text = $"{_config.Gyro.HorizontalSensitivity:0}";
+        GyroZMultiplierVal.Text = $"{_config.Gyro.ZAxisMultiplier:0.0}";
+        GyroDeadzoneVal.Text = $"{_config.Gyro.Deadzone:0.0}";
     }
 
     private void RefreshSensitivityPresetState()
@@ -350,7 +452,11 @@ public partial class MainWindow : Window
         && NearlyEqual(_config.LeftStick.AccelRampSeconds, preset.AccelRamp)
         && NearlyEqual(_config.RightStick.Speed, preset.ScrollSpeed)
         && NearlyEqual(_config.RightStick.AccelMaxFactor, preset.ScrollAccelMax)
-        && NearlyEqual(_config.RightStick.AccelRampSeconds, preset.ScrollAccelRamp);
+        && NearlyEqual(_config.RightStick.AccelRampSeconds, preset.ScrollAccelRamp)
+        && NearlyEqual(_config.Gyro.Sensitivity, preset.GyroSensitivity)
+        && NearlyEqual(_config.Gyro.HorizontalSensitivity, preset.GyroHorizontalSensitivity)
+        && NearlyEqual(_config.Gyro.ZAxisMultiplier, preset.GyroZAxisMultiplier)
+        && NearlyEqual(_config.Gyro.Deadzone, preset.GyroDeadzone);
 
     private static bool NearlyEqual(float left, float right) => MathF.Abs(left - right) < 0.001f;
 

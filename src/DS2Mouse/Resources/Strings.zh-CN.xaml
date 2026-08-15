@@ -27,7 +27,18 @@
     <s:String x:Key="Section.Whitelist">全屏白名单（按进程名 — 全屏时自动禁用映射，列入此处则保留）</s:String>
     <s:String x:Key="Section.Mapping">按键映射</s:String>
     <s:String x:Key="Section.Sensitivity">灵敏度</s:String>
+    <s:String x:Key="Section.Gyro">陀螺仪</s:String>
     <s:String x:Key="Section.Settings">设置</s:String>
+
+    <s:String x:Key="Gyro.Enable">启用陀螺仪移动鼠标</s:String>
+    <s:String x:Key="Gyro.Hint">使用 DualSense 出厂校准；Xbox 手柄不支持</s:String>
+    <s:String x:Key="Gyro.Activation">触发方式</s:String>
+    <s:String x:Key="Gyro.Activation.Always">始终启用</s:String>
+    <s:String x:Key="Gyro.Activation.HoldL2">按住 L2</s:String>
+    <s:String x:Key="Gyro.Activation.HoldR2">按住 R2</s:String>
+    <s:String x:Key="Touchpad.Enable">启用触摸板移动鼠标</s:String>
+    <s:String x:Key="Touchpad.PointerHint">单指移动鼠标；灵敏度与左摇杆保持一致</s:String>
+    <s:String x:Key="Touchpad.ClickHint">按下左、中、右区域时触发对应按键映射</s:String>
 
     <s:String x:Key="Sensitivity.Hint">选择一个预设，或展开自定义参数</s:String>
     <s:String x:Key="Preset.Precise">精细</s:String>
@@ -44,6 +55,10 @@
     <s:String x:Key="Field.AccelMax">加速上限（×）</s:String>
     <s:String x:Key="Field.AccelRamp">加速到上限耗时（秒）</s:String>
     <s:String x:Key="Field.ScrollSpeed">速度（刻度/秒）</s:String>
+    <s:String x:Key="Field.GyroHorizontalSensitivity">水平灵敏度（像素/度）</s:String>
+    <s:String x:Key="Field.GyroVerticalSensitivity">垂直灵敏度（像素/度）</s:String>
+    <s:String x:Key="Field.GyroZMultiplier">Z 轴倍率</s:String>
+    <s:String x:Key="Field.GyroDeadzone">静止死区（度/秒）</s:String>
     <s:String x:Key="Field.Language">语言</s:String>
     <s:String x:Key="Field.Notifications">启用通知</s:String>
     <s:String x:Key="Field.AutoStart">开机自启</s:String>
